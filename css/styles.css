@@ -82,6 +82,7 @@
 html {
     scroll-behavior: smooth;
     font-size: 16px;
+    -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -95,6 +96,14 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
+/* Improve tap targets for touch devices */
+@media (hover: none) and (pointer: coarse) {
+    a, button, .btn {
+        min-height: 44px;
+        min-width: 44px;
+    }
+}
+
 img {
     max-width: 100%;
     height: auto;
@@ -105,6 +114,7 @@ a {
     text-decoration: none;
     color: inherit;
     transition: color var(--transition-fast);
+    -webkit-tap-highlight-color: transparent;
 }
 
 ul, ol {
@@ -116,6 +126,7 @@ button {
     cursor: pointer;
     border: none;
     background: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 /* ========== Typography ========== */
@@ -1003,10 +1014,13 @@ p {
 }
 
 /* ========== Responsive Design ========== */
+
+/* Large Tablets and Small Desktops */
 @media (max-width: 1024px) {
     .hero-content {
         grid-template-columns: 1fr;
         text-align: center;
+        padding-top: 80px;
     }
     
     .hero-text {
@@ -1015,6 +1029,7 @@ p {
     
     .hero-visual {
         order: 1;
+        margin-bottom: var(--spacing-2xl);
     }
     
     .hero-description {
@@ -1025,6 +1040,10 @@ p {
         justify-content: center;
     }
     
+    .hero-badge {
+        margin: 0 auto var(--spacing-lg);
+    }
+    
     .webcam-content {
         grid-template-columns: 1fr;
         text-align: center;
@@ -1033,11 +1052,19 @@ p {
     .webcam-visual {
         order: -1;
         max-width: 500px;
+        margin: 0 auto var(--spacing-2xl);
+    }
+    
+    .webcam-text .btn {
         margin: 0 auto;
     }
     
+    .webcam-benefits {
+        max-width: 500px;
+        margin: 0 auto var(--spacing-2xl);
+    }
+    
     .webcam-benefits li {
-        justify-content: center;
         text-align: left;
     }
     
@@ -1047,12 +1074,46 @@ p {
     
     .footer-content {
         grid-template-columns: 1fr 1fr;
+        gap: var(--spacing-2xl);
+    }
+    
+    .floating-elements {
+        display: none;
     }
 }
 
+/* Tablets */
 @media (max-width: 768px) {
+    :root {
+        --spacing-4xl: 4rem;
+        --spacing-3xl: 3rem;
+    }
+    
+    .section {
+        padding: var(--spacing-3xl) 0;
+    }
+    
     .nav-links {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(26, 26, 46, 0.98);
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: var(--spacing-xl);
         display: none;
+        z-index: 999;
+    }
+    
+    .nav-links.active {
+        display: flex;
+    }
+    
+    .nav-links a {
+        font-size: 1.25rem;
     }
     
     .nav-cta .btn {
@@ -1061,35 +1122,102 @@ p {
     
     .mobile-menu-btn {
         display: flex;
+        z-index: 1001;
+    }
+    
+    .mobile-menu-btn.active span:nth-child(1) {
+        transform: rotate(45deg) translate(5px, 5px);
+    }
+    
+    .mobile-menu-btn.active span:nth-child(2) {
+        opacity: 0;
+    }
+    
+    .mobile-menu-btn.active span:nth-child(3) {
+        transform: rotate(-45deg) translate(5px, -5px);
+    }
+    
+    .hero {
+        min-height: auto;
+        padding: 120px 0 var(--spacing-3xl);
     }
     
     .hero-mudra-display {
-        width: 280px;
-        height: 280px;
+        width: 250px;
+        height: 250px;
+    }
+    
+    .hero-mudra-icon {
+        width: 150px;
+        height: 150px;
+    }
+    
+    .hero-image-bg {
+        width: 300px;
+        height: 300px;
+    }
+    
+    .hero-title {
+        font-size: clamp(2rem, 8vw, 3rem);
+    }
+    
+    .hero-description {
+        font-size: 1.1rem;
+    }
+    
+    .section-header {
+        margin-bottom: var(--spacing-2xl);
+    }
+    
+    .section-header p {
+        font-size: 1rem;
+    }
+    
+    .features-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-lg);
+    }
+    
+    .feature-card {
+        padding: var(--spacing-xl);
     }
     
     .games-grid {
         grid-template-columns: 1fr;
+        gap: var(--spacing-lg);
+    }
+    
+    .game-card {
+        padding: var(--spacing-xl);
     }
     
     .stats-grid {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: repeat(2, 1fr);
         gap: var(--spacing-lg);
     }
     
     .stat-item h3 {
-        font-size: 2.5rem;
+        font-size: 2.25rem;
+    }
+    
+    .stat-item p {
+        font-size: 0.9rem;
     }
     
     .footer-content {
         grid-template-columns: 1fr;
         text-align: center;
+        gap: var(--spacing-2xl);
     }
     
     .footer-brand {
         display: flex;
         flex-direction: column;
         align-items: center;
+    }
+    
+    .footer-brand .logo {
+        justify-content: center;
     }
     
     .footer-brand p {
@@ -1100,15 +1228,69 @@ p {
         justify-content: center;
     }
     
+    .footer-links {
+        text-align: center;
+    }
+    
     .footer-bottom {
         flex-direction: column;
         gap: var(--spacing-md);
+        text-align: center;
+    }
+    
+    .webcam-mockup {
+        padding: var(--spacing-sm);
+    }
+    
+    .detection-box {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .detection-label {
+        font-size: 0.75rem;
+        padding: var(--spacing-xs) var(--spacing-sm);
     }
 }
 
+/* Mobile Phones */
 @media (max-width: 480px) {
     :root {
         --container-padding: 1rem;
+        --spacing-4xl: 3rem;
+        --spacing-3xl: 2.5rem;
+        --spacing-2xl: 2rem;
+    }
+    
+    .logo-text {
+        font-size: 1.25rem;
+    }
+    
+    .logo-icon {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .logo-icon svg {
+        width: 22px;
+        height: 22px;
+    }
+    
+    .hero {
+        padding: 100px 0 var(--spacing-2xl);
+    }
+    
+    .hero-badge {
+        font-size: 0.75rem;
+        padding: var(--spacing-xs) var(--spacing-sm);
+    }
+    
+    .hero-title {
+        font-size: clamp(1.75rem, 7vw, 2.5rem);
+    }
+    
+    .hero-description {
+        font-size: 1rem;
     }
     
     .hero-buttons {
@@ -1121,20 +1303,171 @@ p {
     }
     
     .hero-mudra-display {
-        width: 240px;
-        height: 240px;
+        width: 200px;
+        height: 200px;
     }
     
-    .features-grid {
-        grid-template-columns: 1fr;
+    .hero-mudra-icon {
+        width: 120px;
+        height: 120px;
+    }
+    
+    .hero-image-bg {
+        width: 220px;
+        height: 220px;
+    }
+    
+    .btn {
+        padding: var(--spacing-sm) var(--spacing-lg);
+        font-size: 0.9rem;
+    }
+    
+    .btn-lg {
+        padding: var(--spacing-md) var(--spacing-xl);
+        font-size: 1rem;
+    }
+    
+    .feature-card {
+        padding: var(--spacing-lg);
+    }
+    
+    .feature-icon {
+        width: 56px;
+        height: 56px;
+    }
+    
+    .feature-icon svg {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .feature-card h3 {
+        font-size: 1.25rem;
+    }
+    
+    .game-card {
+        padding: var(--spacing-lg);
+    }
+    
+    .game-number {
+        width: 36px;
+        height: 36px;
+        font-size: 0.9rem;
+    }
+    
+    .game-card h3 {
+        font-size: 1.25rem;
+    }
+    
+    .game-features li {
+        font-size: 0.85rem;
+    }
+    
+    .stats {
+        padding: var(--spacing-2xl) 0;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: var(--spacing-md);
+    }
+    
+    .stat-item h3 {
+        font-size: 1.75rem;
+    }
+    
+    .stat-item p {
+        font-size: 0.8rem;
+    }
+    
+    .cta-content h2 {
+        font-size: 1.75rem;
+    }
+    
+    .cta-content > p {
+        font-size: 1rem;
     }
     
     .cta-buttons {
         flex-direction: column;
+        width: 100%;
     }
     
     .cta-buttons .btn {
         width: 100%;
+    }
+    
+    .benefit-icon {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .benefit-icon svg {
+        width: 20px;
+        height: 20px;
+    }
+    
+    .benefit-text h4 {
+        font-size: 1rem;
+    }
+    
+    .benefit-text p {
+        font-size: 0.85rem;
+    }
+    
+    .webcam-text h2 {
+        font-size: 1.75rem;
+    }
+    
+    .webcam-text > p {
+        font-size: 1rem;
+    }
+    
+    .mockup-screen svg {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .detection-box {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .footer {
+        padding: var(--spacing-2xl) 0 var(--spacing-lg);
+    }
+    
+    .footer-links h4 {
+        font-size: 0.9rem;
+        margin-bottom: var(--spacing-md);
+    }
+    
+    .footer-links a {
+        font-size: 0.85rem;
+    }
+}
+
+/* Extra Small Devices */
+@media (max-width: 360px) {
+    :root {
+        --container-padding: 0.75rem;
+    }
+    
+    .hero-title {
+        font-size: 1.5rem;
+    }
+    
+    .hero-mudra-display {
+        width: 180px;
+        height: 180px;
+    }
+    
+    .stat-item h3 {
+        font-size: 1.5rem;
+    }
+    
+    .logo-text {
+        font-size: 1.1rem;
     }
 }
 
