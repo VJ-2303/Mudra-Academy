@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Test your theoretical knowledge of Bharatanatyam mudras with our interactive quiz challenge">
+    <title>Mudra Quiz Challenge - Mudra Academy</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../css/styles.css">
+    <link rel="stylesheet" href="../../css/pages.css">
+    
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%238B2942' width='100' height='100' rx='20'/%3E%3Ctext x='50' y='65' font-size='50' text-anchor='middle' fill='%23D4A84B' font-family='serif'%3EM%3C/text%3E%3C/svg%3E">
+    
+    <style>
+        /* Quiz Page Specific Styles */
+        .quiz-container {
+            padding: 2rem 0 4rem;
+            min-height: calc(100vh - 80px);
+        }
+
+        /* Start Screen */
+        .quiz-start-screen {
+            text-align: center;
+            padding: 4rem 2rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .quiz-start-icon {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 2rem;
+            box-shadow: 0 20px 40px rgba(139, 41, 66, 0.3);
+        }
+
+        .quiz-start-icon svg {
+            width: 60px;
+            height: 60px;
+            color: white;
+        }
+
+        .quiz-start-screen h1 {
+            font-family: var(--font-display);
+            font-size: 2.5rem;
+            color: var(--color-text);
+            margin-bottom: 1rem;
+        }
+
+        .quiz-start-screen p {
+            color: var(--color-text-light);
+            font-size: 1.1rem;
+            line-height: 1.7;
+            margin-bottom: 2rem;
+        }
+
+        .quiz-info-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .quiz-info-card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 12px;
+            padding: 1.25rem 1rem;
+            text-align: center;
+        }
+
+        .quiz-info-card svg {
+            width: 28px;
+            height: 28px;
+            color: var(--color-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .quiz-info-card span {
+            display: block;
+            font-weight: 600;
+            color: var(--color-text);
+            font-size: 1.1rem;
+        }
+
+        .quiz-info-card small {
+            color: var(--color-text-light);
+            font-size: 0.85rem;
+        }
+
+        .btn-start-quiz {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem 2.5rem;
+            background: linear-gradient(135deg, var(--color-primary), #a33356);
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(139, 41, 66, 0.3);
+        }
+
+        .btn-start-quiz:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(139, 41, 66, 0.4);
+        }
+
+        .btn-start-quiz svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* Quiz Game Area */
+        .quiz-game-area {
+            display: none;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        .quiz-game-area.active {
+            display: block;
+        }
+
+        /* Progress Bar */
+        .quiz-progress-section {
+            margin-bottom: 2rem;
+        }
+
+        .quiz-progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .quiz-progress-text {
+            font-weight: 600;
+            color: var(--color-text);
+        }
+
+        .quiz-score-text {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            color: var(--color-primary);
+        }
+
+        .quiz-score-text svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .quiz-progress-bar {
+            height: 8px;
+            background: var(--color-border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .quiz-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
+            border-radius: 4px;
+            transition: width 0.5s ease;
+            width: 0%;
+        }
+
+        /* Question Card */
+        .quiz-question-card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+        }
+
+        .question-number {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+        }
+
+        .question-text {
+            font-size: 1.35rem;
+            font-weight: 600;
+            color: var(--color-text);
+            line-height: 1.5;
+            margin-bottom: 2rem;
+        }
+
+        /* Options */
+        .quiz-options {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .quiz-option {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.25rem 1.5rem;
+            background: var(--color-background);
+            border: 2px solid var(--color-border);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .quiz-option:hover:not(.disabled) {
+            border-color: var(--color-primary);
+            background: rgba(139, 41, 66, 0.05);
+        }
+
+        .quiz-option.selected {
+            border-color: var(--color-primary);
+            background: rgba(139, 41, 66, 0.1);
+        }
+
+        .quiz-option.correct {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .quiz-option.incorrect {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .quiz-option.disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .quiz-option.correct.show-answer,
+        .quiz-option.correct {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.15);
+        }
+
+        .option-letter {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--color-surface);
+            border: 2px solid var(--color-border);
+            border-radius: 50%;
+            font-weight: 700;
+            color: var(--color-text);
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+        }
+
+        .quiz-option:hover:not(.disabled) .option-letter {
+            border-color: var(--color-primary);
+            color: var(--color-primary);
+        }
+
+        .quiz-option.selected .option-letter {
+            background: var(--color-primary);
+            border-color: var(--color-primary);
+            color: white;
+        }
+
+        .quiz-option.correct .option-letter {
+            background: #10b981;
+            border-color: #10b981;
+            color: white;
+        }
+
+        .quiz-option.incorrect .option-letter {
+            background: #ef4444;
+            border-color: #ef4444;
+            color: white;
+        }
+
+        .option-text {
+            font-size: 1.05rem;
+            color: var(--color-text);
+            flex: 1;
+        }
+
+        .option-icon {
+            width: 24px;
+            height: 24px;
+            display: none;
+        }
+
+        .quiz-option.correct .option-icon.correct-icon,
+        .quiz-option.incorrect .option-icon.incorrect-icon {
+            display: block;
+        }
+
+        .correct-icon {
+            color: #10b981;
+        }
+
+        .incorrect-icon {
+            color: #ef4444;
+        }
+
+        /* Explanation Box */
+        .explanation-box {
+            display: none;
+            margin-top: 1.5rem;
+            padding: 1.25rem;
+            background: linear-gradient(135deg, rgba(212, 168, 75, 0.1), rgba(139, 41, 66, 0.1));
+            border-left: 4px solid var(--color-secondary);
+            border-radius: 0 12px 12px 0;
+        }
+
+        .explanation-box.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .explanation-box h4 {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--color-secondary);
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .explanation-box h4 svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .explanation-box p {
+            color: var(--color-text);
+            line-height: 1.6;
+        }
+
+        /* Next Button */
+        .quiz-next-section {
+            display: none;
+            margin-top: 2rem;
+            text-align: center;
+        }
+
+        .quiz-next-section.show {
+            display: block;
+        }
+
+        .btn-next-question {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, var(--color-primary), #a33356);
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(139, 41, 66, 0.3);
+        }
+
+        .btn-next-question:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(139, 41, 66, 0.4);
+        }
+
+        .btn-next-question svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Results Screen */
+        .quiz-results-screen {
+            display: none;
+            text-align: center;
+            padding: 3rem 2rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .quiz-results-screen.active {
+            display: block;
+        }
+
+        .results-icon {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 2rem;
+            position: relative;
+        }
+
+        .results-icon.excellent {
+            background: linear-gradient(135deg, #10b981, #059669);
+            box-shadow: 0 20px 40px rgba(16, 185, 129, 0.3);
+        }
+
+        .results-icon.good {
+            background: linear-gradient(135deg, var(--color-secondary), #c99a3d);
+            box-shadow: 0 20px 40px rgba(212, 168, 75, 0.3);
+        }
+
+        .results-icon.average {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            box-shadow: 0 20px 40px rgba(245, 158, 11, 0.3);
+        }
+
+        .results-icon.needs-practice {
+            background: linear-gradient(135deg, var(--color-primary), #a33356);
+            box-shadow: 0 20px 40px rgba(139, 41, 66, 0.3);
+        }
+
+        .results-icon svg {
+            width: 70px;
+            height: 70px;
+            color: white;
+        }
+
+        .results-title {
+            font-family: var(--font-display);
+            font-size: 2.5rem;
+            color: var(--color-text);
+            margin-bottom: 0.5rem;
+        }
+
+        .results-subtitle {
+            color: var(--color-text-light);
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+        }
+
+        .results-score-card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .score-circle {
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            margin: 0 auto 1.5rem;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .score-circle svg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+
+        .score-circle circle {
+            fill: none;
+            stroke-width: 8;
+        }
+
+        .score-circle .bg {
+            stroke: var(--color-border);
+        }
+
+        .score-circle .progress {
+            stroke: var(--color-primary);
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1s ease;
+        }
+
+        .score-value {
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--color-primary);
+        }
+
+        .score-value span {
+            font-size: 1.5rem;
+            color: var(--color-text-light);
+        }
+
+        .score-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--color-border);
+        }
+
+        .score-stat {
+            text-align: center;
+        }
+
+        .score-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .score-stat-value.correct-val {
+            color: #10b981;
+        }
+
+        .score-stat-value.incorrect-val {
+            color: #ef4444;
+        }
+
+        .score-stat-value.total-val {
+            color: var(--color-secondary);
+        }
+
+        .score-stat-label {
+            font-size: 0.85rem;
+            color: var(--color-text-light);
+            margin-top: 0.25rem;
+        }
+
+        .results-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-restart {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, var(--color-primary), #a33356);
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(139, 41, 66, 0.3);
+        }
+
+        .btn-restart:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(139, 41, 66, 0.4);
+        }
+
+        .btn-home {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem 2rem;
+            background: var(--color-surface);
+            color: var(--color-text);
+            font-size: 1rem;
+            font-weight: 600;
+            border: 2px solid var(--color-border);
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .btn-home:hover {
+            border-color: var(--color-primary);
+            color: var(--color-primary);
+        }
+
+        .btn-restart svg,
+        .btn-home svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .quiz-start-screen {
+                padding: 2rem 1rem;
+            }
+
+            .quiz-start-icon {
+                width: 100px;
+                height: 100px;
+            }
+
+            .quiz-start-icon svg {
+                width: 50px;
+                height: 50px;
+            }
+
+            .quiz-start-screen h1 {
+                font-size: 1.75rem;
+            }
+
+            .quiz-start-screen p {
+                font-size: 1rem;
+            }
+
+            .quiz-info-cards {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+
+            .quiz-info-card {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                text-align: left;
+                padding: 1rem;
+            }
+
+            .quiz-info-card svg {
+                margin-bottom: 0;
+            }
+
+            .quiz-info-card div {
+                flex: 1;
+            }
+
+            .quiz-question-card {
+                padding: 1.5rem;
+                border-radius: 16px;
+            }
+
+            .question-text {
+                font-size: 1.15rem;
+            }
+
+            .quiz-option {
+                padding: 1rem;
+            }
+
+            .option-letter {
+                width: 32px;
+                height: 32px;
+                font-size: 0.9rem;
+            }
+
+            .option-text {
+                font-size: 0.95rem;
+            }
+
+            .results-icon {
+                width: 120px;
+                height: 120px;
+            }
+
+            .results-icon svg {
+                width: 60px;
+                height: 60px;
+            }
+
+            .results-title {
+                font-size: 1.75rem;
+            }
+
+            .score-circle {
+                width: 140px;
+                height: 140px;
+            }
+
+            .score-value {
+                font-size: 2.5rem;
+            }
+
+            .score-stats {
+                gap: 0.5rem;
+            }
+
+            .score-stat-value {
+                font-size: 1.25rem;
+            }
+
+            .results-actions {
+                flex-direction: column;
+            }
+
+            .btn-restart,
+            .btn-home {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .quiz-container {
+                padding: 1rem 0 3rem;
+            }
+
+            .quiz-start-screen h1 {
+                font-size: 1.5rem;
+            }
+
+            .question-number {
+                font-size: 0.75rem;
+                padding: 0.4rem 0.8rem;
+            }
+
+            .question-text {
+                font-size: 1.05rem;
+                margin-bottom: 1.5rem;
+            }
+
+            .quiz-option {
+                padding: 0.875rem;
+                gap: 0.75rem;
+            }
+
+            .option-letter {
+                width: 28px;
+                height: 28px;
+                font-size: 0.8rem;
+            }
+
+            .explanation-box {
+                padding: 1rem;
+            }
+
+            .results-score-card {
+                padding: 1.5rem;
+            }
+
+            .score-circle {
+                width: 120px;
+                height: 120px;
+            }
+
+            .score-value {
+                font-size: 2rem;
+            }
+
+            .score-value span {
+                font-size: 1.25rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar scrolled">
+        <div class="container">
+            <a href="../../index.html" class="logo">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+                        <path d="M12 6v6l4 2"/>
+                    </svg>
+                </div>
+                <span class="logo-text">Mudra Academy</span>
+            </a>
+            
+            <ul class="nav-links">
+                <li><a href="../../index.html#features">Features</a></li>
+                <li><a href="../../index.html#games">Games</a></li>
+                <li><a href="../../index.html#webcam">Live Detection</a></li>
+                <li><a href="../library.html">Library</a></li>
+            </ul>
+            
+            <div class="nav-cta">
+                <a href="../learn.html" class="btn btn-primary">Start Learning</a>
+            </div>
+            
+            <button class="mobile-menu-btn" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <section class="page-header">
+        <div class="container">
+            <div class="page-header-content">
+                <nav class="breadcrumb">
+                    <a href="../../index.html">Home</a>
+                    <span>/</span>
+                    <a href="../../index.html#games">Games</a>
+                    <span>/</span>
+                    <span>Quiz Challenge</span>
+                </nav>
+                <h1>Mudra Quiz Challenge</h1>
+                <p>Test your knowledge of Bharatanatyam hand gestures</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quiz Container -->
+    <section class="quiz-container">
+        <div class="container">
+            <!-- Start Screen -->
+            <div class="quiz-start-screen" id="startScreen">
+                <div class="quiz-start-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                        <line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                </div>
+                <h1>Ready to Test Your Knowledge?</h1>
+                <p>Challenge yourself with 10 randomly selected questions about Bharatanatyam mudras. Learn the meanings, techniques, and symbolism behind each gesture.</p>
+                
+                <div class="quiz-info-cards">
+                    <div class="quiz-info-card">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                            <line x1="12" y1="17" x2="12.01" y2="17"/>
+                        </svg>
+                        <div>
+                            <span>10</span>
+                            <small>Questions</small>
+                        </div>
+                    </div>
+                    <div class="quiz-info-card">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                            <polyline points="22,6 12,13 2,6"/>
+                        </svg>
+                        <div>
+                            <span>4</span>
+                            <small>Options Each</small>
+                        </div>
+                    </div>
+                    <div class="quiz-info-card">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 20h9"/>
+                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                        </svg>
+                        <div>
+                            <span>Instant</span>
+                            <small>Feedback</small>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn-start-quiz" onclick="startQuiz()">
+                    <span>Start Quiz</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 3 19 12 5 21 5 3"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Quiz Game Area -->
+            <div class="quiz-game-area" id="gameArea">
+                <!-- Progress Section -->
+                <div class="quiz-progress-section">
+                    <div class="quiz-progress-header">
+                        <span class="quiz-progress-text">Question <span id="currentQuestion">1</span> of <span id="totalQuestions">10</span></span>
+                        <span class="quiz-score-text">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                            </svg>
+                            <span id="currentScore">0</span> Points
+                        </span>
+                    </div>
+                    <div class="quiz-progress-bar">
+                        <div class="quiz-progress-fill" id="progressFill"></div>
+                    </div>
+                </div>
+
+                <!-- Question Card -->
+                <div class="quiz-question-card">
+                    <div class="question-number">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                            <line x1="12" y1="17" x2="12.01" y2="17"/>
+                        </svg>
+                        <span>Question <span id="questionNum">1</span></span>
+                    </div>
+                    <h2 class="question-text" id="questionText">Loading question...</h2>
+                    
+                    <div class="quiz-options" id="optionsContainer">
+                        <!-- Options will be dynamically inserted -->
+                    </div>
+
+                    <div class="explanation-box" id="explanationBox">
+                        <h4>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <line x1="12" y1="16" x2="12" y2="12"/>
+                                <line x1="12" y1="8" x2="12.01" y2="8"/>
+                            </svg>
+                            Explanation
+                        </h4>
+                        <p id="explanationText"></p>
+                    </div>
+                </div>
+
+                <!-- Next Button -->
+                <div class="quiz-next-section" id="nextSection">
+                    <button class="btn-next-question" id="nextBtn" onclick="nextQuestion()">
+                        <span>Next Question</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                            <polyline points="12 5 19 12 12 19"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Screen -->
+            <div class="quiz-results-screen" id="resultsScreen">
+                <div class="results-icon" id="resultsIcon">
+                    <svg id="resultsIconSvg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                </div>
+                <h2 class="results-title" id="resultsTitle">Great Job!</h2>
+                <p class="results-subtitle" id="resultsSubtitle">You've completed the quiz</p>
+
+                <div class="results-score-card">
+                    <div class="score-circle">
+                        <svg viewBox="0 0 100 100">
+                            <circle class="bg" cx="50" cy="50" r="45"/>
+                            <circle class="progress" id="scoreCircle" cx="50" cy="50" r="45" stroke-dasharray="283" stroke-dashoffset="283"/>
+                        </svg>
+                        <div class="score-value">
+                            <span id="finalScore">0</span><span>/10</span>
+                        </div>
+                    </div>
+
+                    <div class="score-stats">
+                        <div class="score-stat">
+                            <div class="score-stat-value correct-val" id="correctCount">0</div>
+                            <div class="score-stat-label">Correct</div>
+                        </div>
+                        <div class="score-stat">
+                            <div class="score-stat-value incorrect-val" id="incorrectCount">0</div>
+                            <div class="score-stat-label">Incorrect</div>
+                        </div>
+                        <div class="score-stat">
+                            <div class="score-stat-value total-val" id="percentageScore">0%</div>
+                            <div class="score-stat-label">Score</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="results-actions">
+                    <button class="btn-restart" onclick="restartQuiz()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 4 23 10 17 10"/>
+                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                        </svg>
+                        <span>Try Again</span>
+                    </button>
+                    <a href="../../index.html#games" class="btn-home">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                            <polyline points="9 22 9 12 15 12 15 22"/>
+                        </svg>
+                        <span>More Games</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom" style="border-top: none; padding-top: 0;">
+                <p>2025 Mudra Academy. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <script>
+        // Quiz Questions Database
+        const allQuestions = [
+            {
+                question: "Bherunda Mudra symbolizes:",
+                options: ["Rest", "Unity", "Power and dominance", "Offering"],
+                correct: 2,
+                explanation: "Bherunda Mudra shows immense power and dominance."
+            },
+            {
+                question: "Which mudra is known as the Scissor Face?",
+                options: ["Kartarimukha", "Shukatunda", "Suchi", "Kapitta"],
+                correct: 0,
+                explanation: "The separated index and middle fingers resemble scissors, hence the name Kartarimukha."
+            },
+            {
+                question: "Matsya Mudra represents:",
+                options: ["Bird", "Snake", "Fish and water movement", "Fire"],
+                correct: 2,
+                explanation: "Matsya Mudra represents fish and flowing water."
+            },
+            {
+                question: "Which Samyuta Hasta represents offering flowers?",
+                options: ["Kapota", "Pushpaputa", "Samputa", "Dola"],
+                correct: 1,
+                explanation: "Pushpaputa Mudra forms a flower basket symbolizing floral offerings."
+            },
+            {
+                question: "Which finger is bent in Tripataka Mudra?",
+                options: ["Index", "Middle", "Ring", "Little"],
+                correct: 2,
+                explanation: "Tripataka Mudra is formed by bending only the ring finger while others remain extended."
+            },
+            {
+                question: "Karkata Mudra is formed by:",
+                options: ["Joining palms", "Crossing wrists", "Interlocking fingers", "Clenching fists"],
+                correct: 2,
+                explanation: "Karkata Mudra interlocks fingers to resemble a crab, showing strength."
+            },
+            {
+                question: "Arala Mudra is mainly used to denote:",
+                options: ["Greeting", "Drinking nectar or poison", "Flower offering", "Anger"],
+                correct: 1,
+                explanation: "Arala Mudra conveys the act of drinking nectar, poison, or medicine in dance narratives."
+            },
+            {
+                question: "Suchi Mudra is commonly used to show:",
+                options: ["Offering", "Eating", "Pointing or number one", "Blessing"],
+                correct: 2,
+                explanation: "Suchi Mudra has an extended index finger indicating direction or number one."
+            },
+            {
+                question: "Mayura Mudra is formed by touching which fingers?",
+                options: ["Thumb & Index", "Thumb & Middle", "Thumb & Ring", "Thumb & Little"],
+                correct: 2,
+                explanation: "In Mayura Mudra, the ring finger touches the thumb symbolizing beauty and grace."
+            },
+            {
+                question: "Anjali Mudra is mainly used to show:",
+                options: ["Anger", "Greeting and respect", "Fear", "Fighting"],
+                correct: 1,
+                explanation: "Anjali Mudra is a salutation gesture expressing respect and devotion."
+            },
+            {
+                question: "What does Pataka Mudra commonly represent?",
+                options: ["Fire", "Weapon", "Clouds, forest, denial", "Crown"],
+                correct: 2,
+                explanation: "Pataka Mudra depicts natural elements like clouds, forests, rivers and symbolic meanings such as denial and command."
+            },
+            {
+                question: "Which mudra represents speed and protection like an eagle?",
+                options: ["Garuda", "Bherunda", "Nagabandha", "Varaha"],
+                correct: 0,
+                explanation: "Garuda Mudra symbolizes speed and divine protection."
+            },
+            {
+                question: "Which mudra represents Shiva's trident and divine power?",
+                options: ["Shikhara", "Trishula", "Chakra", "Simhamukha"],
+                correct: 1,
+                explanation: "Trishula Mudra symbolizes Shiva's trident and divine power."
+            },
+            {
+                question: "Which mudra is used for tying garlands and ornaments?",
+                options: ["Kapitta", "Katakamukha", "Mukula", "Hamsasya"],
+                correct: 1,
+                explanation: "Katakamukha Mudra represents delicate actions like tying garlands and wearing ornaments."
+            },
+            {
+                question: "Bhramara Mudra is associated with:",
+                options: ["Swan", "Bee and attraction", "Snake", "Moon"],
+                correct: 1,
+                explanation: "Bhramara Mudra represents a bee and attraction related to Manmatha."
+            },
+            {
+                question: "Shivalinga Mudra is associated with:",
+                options: ["Vishnu", "Brahma", "Shiva", "Indra"],
+                correct: 2,
+                explanation: "Shivalinga Mudra represents devotion to Lord Shiva."
+            },
+            {
+                question: "Which mudra symbolizes auspiciousness and prosperity?",
+                options: ["Swastika", "Kapota", "Matsya", "Kurma"],
+                correct: 0,
+                explanation: "Swastika Mudra represents auspiciousness and well-being."
+            },
+            {
+                question: "Which mudra represents a fully bloomed lotus?",
+                options: ["Padmakosha", "Mukula", "Alapadma", "Chandrakala"],
+                correct: 2,
+                explanation: "Alapadma Mudra symbolizes a fully bloomed lotus and elegance."
+            },
+            {
+                question: "Which mudra shows concealment or a covered container?",
+                options: ["Samputa", "Pasha", "Chakra", "Khatva"],
+                correct: 0,
+                explanation: "Samputa Mudra depicts concealment or holding something hidden."
+            },
+            {
+                question: "What does Mushti Mudra represent?",
+                options: ["Greeting", "Anger and strength", "Flower bud", "Moon"],
+                correct: 1,
+                explanation: "Mushti Mudra forms a fist indicating power, firmness, and heroic actions."
+            },
+            {
+                question: "Which mudra is used to represent 'Leaves', 'Riverbank', or a 'Horn'?",
+                options: ["Pataka", "Ardhapataka", "Tripataka", "Arala"],
+                correct: 1,
+                explanation: "Ardhapataka is the 'Half flag' used to depict leaves, a riverbank, or a horn."
+            },
+            {
+                question: "In which mudra are the Thumb and Little finger extended while others are bent?",
+                options: ["Chandrakala", "Mrigashirsha", "Hamsasya", "Suchi"],
+                correct: 0,
+                explanation: "In Chandrakala ('Moon tip'), the thumb and little finger are extended to resemble the crescent moon."
+            },
+            {
+                question: "Which mudra represents 'Valor', a 'Bow', or a 'Bell'?",
+                options: ["Shikhara", "Mushti", "Kapitta", "Tamrachuda"],
+                correct: 0,
+                explanation: "Shikhara ('Crest') is used to represent a bow, bell, valor, or the trident symbol."
+            },
+            {
+                question: "The 'Parrot Beak' mudra, used for shooting arrows, is called:",
+                options: ["Hamsasya", "Shukatunda", "Mukula", "Kangula"],
+                correct: 1,
+                explanation: "Shukatunda literally translates to 'Parrot beak' and is used for actions like shooting arrows."
+            },
+            {
+                question: "Which mudra is used to represent Goddess Lakshmi or 'Holding flowers'?",
+                options: ["Kapitta", "Katakamukha", "Alapadma", "Ardhachandra"],
+                correct: 0,
+                explanation: "Kapitta ('Elephant apple') is used to represent holding flowers, devotion, or Goddess Lakshmi."
+            },
+            {
+                question: "Which mudra represents a 'Deer head' or 'Innocence'?",
+                options: ["Simhamukha", "Mrigashirsha", "Sarpashirsha", "Go-mukha"],
+                correct: 1,
+                explanation: "Mrigashirsha translates to 'Deer head' and symbolizes the animal or innocence/tenderness."
+            },
+            {
+                question: "To represent a 'Lion' or 'Fierceness', which mudra is used?",
+                options: ["Vyaghra", "Simhamukha", "Mushti", "Trishula"],
+                correct: 1,
+                explanation: "Simhamukha ('Lion face') represents a lion, fierceness, or pouring liquids."
+            },
+            {
+                question: "Which mudra forms a 'Bud-like hollow shape' to represent a Lotus Bud?",
+                options: ["Alapadma", "Padmakosha", "Mukula", "Kangula"],
+                correct: 1,
+                explanation: "Padmakosha ('Lotus bud') is formed by curving all fingers inward to create a hollow bud shape."
+            },
+            {
+                question: "What does the 'Sarpashirsha' mudra represent?",
+                options: ["Fish", "Snake hood", "Turtle", "Bird"],
+                correct: 1,
+                explanation: "Sarpashirsha ('Serpent head') is used to depict a snake's hood or actions like an oil massage."
+            },
+            {
+                question: "Which mudra is used to represent 'Small fruits', 'Berries', or a 'Small bell'?",
+                options: ["Kangula", "Mukula", "Bhramara", "Hamsasya"],
+                correct: 0,
+                explanation: "Kangula is used to represent small objects like berries, small fruits, or a small bell."
+            },
+            {
+                question: "Which mudra represents a 'Swan wing' and actions like sweeping?",
+                options: ["Hamsasya", "Hamsapaksha", "Mayura", "Pataka"],
+                correct: 1,
+                explanation: "Hamsapaksha ('Swan wing') involves stretching the hand sideways to resemble a wing."
+            },
+            {
+                question: "In which mudra do the thumb and index finger touch lightly to represent a 'Pearl' or 'Thread'?",
+                options: ["Hamsasya", "Om", "Sandamsha", "Mukula"],
+                correct: 0,
+                explanation: "Hamsasya ('Swan beak') is formed by the thumb and index finger touching, used for handling thread or pearls."
+            },
+            {
+                question: "Which mudra is known as 'Pincers' and used for 'Gripping'?",
+                options: ["Sandamsha", "Katakamukha", "Mushti", "Kartarimukha"],
+                correct: 0,
+                explanation: "Sandamsha ('Pincers') involves the index finger and thumb pinching together to show gripping or tension."
+            },
+            {
+                question: "Which mudra is used to represent 'Eating' or 'Offering'?",
+                options: ["Mukula", "Padmakosha", "Alapadma", "Pataka"],
+                correct: 0,
+                explanation: "Mukula ('Bud') is formed by all fingertips touching together and is used to denote eating or offering."
+            },
+            {
+                question: "Which mudra represents a 'Rooster'?",
+                options: ["Mayura", "Tamrachuda", "Bhramara", "Hamsapaksha"],
+                correct: 1,
+                explanation: "Tamrachuda ('Rooster crest') is used to represent a rooster, alertness, or speed."
+            },
+            {
+                question: "Which mudra represents 'Intelligence' or 'Counting'?",
+                options: ["Chatura", "Pataka", "Suchi", "Tripataka"],
+                correct: 0,
+                explanation: "Chatura ('Clever hand') represents intelligence, counting, or subtlety."
+            },
+            {
+                question: "Which mudra is formed by bending the index finger inward while others are extended (used for 'Wind')?",
+                options: ["Arala", "Suchi", "Tamrachuda", "Shukatunda"],
+                correct: 0,
+                explanation: "Arala ('Bent hand') is formed by bending the index finger and is used for wind or drinking poison."
+            },
+            {
+                question: "Which mudra is used to represent 'Indra' or a 'Thunderbolt'?",
+                options: ["Pataka", "Tripataka", "Ardhapataka", "Shikhara"],
+                correct: 1,
+                explanation: "Tripataka ('Three-part flag') is used to represent Indra, a thunderbolt, or a tree."
+            },
+            {
+                question: "Which mudra represents 'Greeting' or 'Half Moon'?",
+                options: ["Ardhachandra", "Chandrakala", "Pataka", "Anjali"],
+                correct: 0,
+                explanation: "Ardhachandra ('Half moon') is used for greetings, blessings, or carrying the moon."
+            },
+            {
+                question: "Which mudra involves the thumb, index, and middle fingers forming a circle (used for tying garlands)?",
+                options: ["Katakamukha", "Kapitta", "Hamsasya", "Sandamsha"],
+                correct: 0,
+                explanation: "Katakamukha ('Bracelet link') is used for delicate tasks like tying garlands or wearing ornaments."
+            }
+        ];
+
+        // Quiz State
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let selectedQuestions = [];
+        let answered = false;
+
+        // Shuffle array using Fisher-Yates algorithm
+        function shuffleArray(array) {
+            const shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
+        // Start Quiz
+        function startQuiz() {
+            // Select 10 random questions
+            selectedQuestions = shuffleArray(allQuestions).slice(0, 10);
+            currentQuestionIndex = 0;
+            score = 0;
+            answered = false;
+
+            // Hide start screen, show game area
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('gameArea').classList.add('active');
+            document.getElementById('resultsScreen').classList.remove('active');
+
+            // Reset UI
+            document.getElementById('currentScore').textContent = '0';
+            
+            // Load first question
+            loadQuestion();
+        }
+
+        // Load Question
+        function loadQuestion() {
+            answered = false;
+            const question = selectedQuestions[currentQuestionIndex];
+            
+            // Update progress
+            document.getElementById('currentQuestion').textContent = currentQuestionIndex + 1;
+            document.getElementById('questionNum').textContent = currentQuestionIndex + 1;
+            document.getElementById('progressFill').style.width = ((currentQuestionIndex) / 10 * 100) + '%';
+
+            // Set question text
+            document.getElementById('questionText').textContent = question.question;
+
+            // Generate options
+            const optionsContainer = document.getElementById('optionsContainer');
+            optionsContainer.innerHTML = '';
+            
+            const letters = ['A', 'B', 'C', 'D'];
+            question.options.forEach((option, index) => {
+                const optionEl = document.createElement('div');
+                optionEl.className = 'quiz-option';
+                optionEl.dataset.index = index;
+                optionEl.innerHTML = `
+                    <span class="option-letter">${letters[index]}</span>
+                    <span class="option-text">${option}</span>
+                    <svg class="option-icon correct-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <svg class="option-icon incorrect-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                `;
+                optionEl.addEventListener('click', () => selectOption(index));
+                optionsContainer.appendChild(optionEl);
+            });
+
+            // Hide explanation and next button
+            document.getElementById('explanationBox').classList.remove('show');
+            document.getElementById('nextSection').classList.remove('show');
+
+            // Update next button text
+            const nextBtn = document.getElementById('nextBtn');
+            if (currentQuestionIndex === 9) {
+                nextBtn.innerHTML = `
+                    <span>See Results</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                `;
+            } else {
+                nextBtn.innerHTML = `
+                    <span>Next Question</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                        <polyline points="12 5 19 12 12 19"/>
+                    </svg>
+                `;
+            }
+        }
+
+        // Select Option
+        function selectOption(selectedIndex) {
+            if (answered) return;
+            answered = true;
+
+            const question = selectedQuestions[currentQuestionIndex];
+            const options = document.querySelectorAll('.quiz-option');
+            
+            // Disable all options
+            options.forEach(opt => opt.classList.add('disabled'));
+
+            // Mark selected option
+            options[selectedIndex].classList.add('selected');
+
+            // Check if correct
+            if (selectedIndex === question.correct) {
+                options[selectedIndex].classList.add('correct');
+                score++;
+                document.getElementById('currentScore').textContent = score;
+            } else {
+                options[selectedIndex].classList.add('incorrect');
+                // Show correct answer
+                options[question.correct].classList.add('correct', 'show-answer');
+            }
+
+            // Show explanation
+            document.getElementById('explanationText').textContent = question.explanation;
+            document.getElementById('explanationBox').classList.add('show');
+
+            // Show next button
+            document.getElementById('nextSection').classList.add('show');
+        }
+
+        // Next Question
+        function nextQuestion() {
+            currentQuestionIndex++;
+            
+            if (currentQuestionIndex >= 10) {
+                showResults();
+            } else {
+                loadQuestion();
+            }
+        }
+
+        // Show Results
+        function showResults() {
+            document.getElementById('gameArea').classList.remove('active');
+            document.getElementById('resultsScreen').classList.add('active');
+
+            // Calculate stats
+            const correct = score;
+            const incorrect = 10 - score;
+            const percentage = (score / 10) * 100;
+
+            // Update results UI
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('correctCount').textContent = correct;
+            document.getElementById('incorrectCount').textContent = incorrect;
+            document.getElementById('percentageScore').textContent = percentage + '%';
+
+            // Animate score circle
+            const circumference = 2 * Math.PI * 45;
+            const offset = circumference - (percentage / 100) * circumference;
+            setTimeout(() => {
+                document.getElementById('scoreCircle').style.strokeDashoffset = offset;
+            }, 100);
+
+            // Set result icon and message based on score
+            const resultsIcon = document.getElementById('resultsIcon');
+            const resultsTitle = document.getElementById('resultsTitle');
+            const resultsSubtitle = document.getElementById('resultsSubtitle');
+            const iconSvg = document.getElementById('resultsIconSvg');
+
+            resultsIcon.className = 'results-icon';
+
+            if (score >= 9) {
+                resultsIcon.classList.add('excellent');
+                resultsTitle.textContent = 'Excellent!';
+                resultsSubtitle.textContent = 'You are a mudra master!';
+                iconSvg.innerHTML = '<path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>';
+            } else if (score >= 7) {
+                resultsIcon.classList.add('good');
+                resultsTitle.textContent = 'Great Job!';
+                resultsSubtitle.textContent = 'You have solid mudra knowledge!';
+                iconSvg.innerHTML = '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>';
+            } else if (score >= 5) {
+                resultsIcon.classList.add('average');
+                resultsTitle.textContent = 'Good Effort!';
+                resultsSubtitle.textContent = 'Keep practicing to improve!';
+                iconSvg.innerHTML = '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>';
+            } else {
+                resultsIcon.classList.add('needs-practice');
+                resultsTitle.textContent = 'Keep Learning!';
+                resultsSubtitle.textContent = 'Visit the library to study more!';
+                iconSvg.innerHTML = '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>';
+            }
+        }
+
+        // Restart Quiz
+        function restartQuiz() {
+            // Reset score circle animation
+            document.getElementById('scoreCircle').style.strokeDashoffset = 283;
+            
+            // Small delay to allow CSS transition reset
+            setTimeout(() => {
+                startQuiz();
+            }, 100);
+        }
+
+        // Initialize mobile menu
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
+            const navLinks = document.querySelector('.nav-links');
+            
+            if (mobileMenuBtn && navLinks) {
+                mobileMenuBtn.addEventListener('click', function() {
+                    navLinks.classList.toggle('active');
+                    this.classList.toggle('active');
+                });
+            }
+        });
+    </script>
+</body>
+</html>

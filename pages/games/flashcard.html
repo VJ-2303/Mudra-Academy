@@ -1,0 +1,1447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Learn Bharatanatyam mudras with interactive flashcards - identify mudras from images">
+    <title>Mudra Flashcards - Mudra Academy</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../css/styles.css">
+    <link rel="stylesheet" href="../../css/pages.css">
+    
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%238B2942' width='100' height='100' rx='20'/%3E%3Ctext x='50' y='65' font-size='50' text-anchor='middle' fill='%23D4A84B' font-family='serif'%3EM%3C/text%3E%3C/svg%3E">
+    
+    <style>
+        /* Flashcard Page Styles */
+        .flashcard-container {
+            padding: 2rem 0 4rem;
+            min-height: calc(100vh - 80px);
+        }
+
+        /* Start Screen */
+        .flashcard-start-screen {
+            text-align: center;
+            padding: 4rem 2rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .flashcard-start-icon {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 2rem;
+            box-shadow: 0 20px 40px rgba(139, 41, 66, 0.3);
+            transform: rotate(-5deg);
+        }
+
+        .flashcard-start-icon svg {
+            width: 60px;
+            height: 60px;
+            color: white;
+        }
+
+        .flashcard-start-screen h1 {
+            font-family: var(--font-display);
+            font-size: 2.5rem;
+            color: var(--color-text);
+            margin-bottom: 1rem;
+        }
+
+        .flashcard-start-screen p {
+            color: var(--color-text-light);
+            font-size: 1.1rem;
+            line-height: 1.7;
+            margin-bottom: 2rem;
+        }
+
+        .flashcard-info-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .flashcard-info-card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 12px;
+            padding: 1.25rem 1rem;
+            text-align: center;
+        }
+
+        .flashcard-info-card svg {
+            width: 28px;
+            height: 28px;
+            color: var(--color-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .flashcard-info-card span {
+            display: block;
+            font-weight: 600;
+            color: var(--color-text);
+            font-size: 1.1rem;
+        }
+
+        .flashcard-info-card small {
+            color: var(--color-text-light);
+            font-size: 0.85rem;
+        }
+
+        .btn-start-flashcard {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem 2.5rem;
+            background: linear-gradient(135deg, var(--color-primary), #a33356);
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(139, 41, 66, 0.3);
+        }
+
+        .btn-start-flashcard:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(139, 41, 66, 0.4);
+        }
+
+        .btn-start-flashcard svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        /* Game Area */
+        .flashcard-game-area {
+            display: none;
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        .flashcard-game-area.active {
+            display: block;
+        }
+
+        /* Progress Section */
+        .flashcard-progress-section {
+            margin-bottom: 2rem;
+        }
+
+        .flashcard-progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .flashcard-progress-text {
+            font-weight: 600;
+            color: var(--color-text);
+        }
+
+        .flashcard-score-text {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            color: var(--color-primary);
+        }
+
+        .flashcard-score-text svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .flashcard-progress-bar {
+            height: 8px;
+            background: var(--color-border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .flashcard-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
+            border-radius: 4px;
+            transition: width 0.5s ease;
+            width: 0%;
+        }
+
+        /* Flashcard */
+        .flashcard-wrapper {
+            perspective: 1000px;
+            margin-bottom: 2rem;
+        }
+
+        .flashcard {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .flashcard-image-section {
+            position: relative;
+            background: linear-gradient(135deg, #f8f5f2 0%, #efe9e4 100%);
+            padding: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 320px;
+        }
+
+        .flashcard-number {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .flashcard-number svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .flashcard-hint-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: white;
+            border: 1px solid var(--color-border);
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--color-text-light);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .flashcard-hint-btn:hover {
+            border-color: var(--color-secondary);
+            color: var(--color-secondary);
+        }
+
+        .flashcard-hint-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .flashcard-image {
+            max-width: 280px;
+            max-height: 280px;
+            width: 100%;
+            height: auto;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .flashcard-image:hover {
+            transform: scale(1.02);
+        }
+
+        .flashcard-content {
+            padding: 1.5rem 2rem 2rem;
+        }
+
+        .flashcard-question {
+            text-align: center;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--color-text);
+            margin-bottom: 1.5rem;
+        }
+
+        /* Options Grid */
+        .flashcard-options {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .flashcard-option {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            padding: 1rem 1.25rem;
+            background: var(--color-background);
+            border: 2px solid var(--color-border);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            color: var(--color-text);
+            text-align: center;
+        }
+
+        .flashcard-option:hover:not(.disabled) {
+            border-color: var(--color-primary);
+            background: rgba(139, 41, 66, 0.05);
+            transform: translateY(-2px);
+        }
+
+        .flashcard-option.selected {
+            border-color: var(--color-primary);
+            background: rgba(139, 41, 66, 0.1);
+        }
+
+        .flashcard-option.correct {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.15);
+            color: #047857;
+        }
+
+        .flashcard-option.incorrect {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.15);
+            color: #dc2626;
+        }
+
+        .flashcard-option.disabled {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .flashcard-option.correct.highlight {
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.2);
+            animation: pulse-correct 0.5s ease;
+        }
+
+        @keyframes pulse-correct {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        .option-icon {
+            width: 20px;
+            height: 20px;
+            display: none;
+            flex-shrink: 0;
+        }
+
+        .flashcard-option.correct .option-icon.correct-icon,
+        .flashcard-option.incorrect .option-icon.incorrect-icon {
+            display: block;
+        }
+
+        .correct-icon { color: #10b981; }
+        .incorrect-icon { color: #ef4444; }
+
+        /* Hint Box */
+        .hint-box {
+            display: none;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: rgba(212, 168, 75, 0.1);
+            border-left: 4px solid var(--color-secondary);
+            border-radius: 0 8px 8px 0;
+        }
+
+        .hint-box.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .hint-box p {
+            color: var(--color-text);
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .hint-box svg {
+            width: 18px;
+            height: 18px;
+            color: var(--color-secondary);
+            flex-shrink: 0;
+        }
+
+        /* Feedback Section */
+        .feedback-section {
+            display: none;
+            margin-top: 1.5rem;
+            padding: 1.25rem;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .feedback-section.show {
+            display: block;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .feedback-section.correct {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .feedback-section.incorrect {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .feedback-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 0.75rem;
+        }
+
+        .feedback-section.correct .feedback-icon {
+            background: #10b981;
+        }
+
+        .feedback-section.incorrect .feedback-icon {
+            background: #ef4444;
+        }
+
+        .feedback-icon svg {
+            width: 24px;
+            height: 24px;
+            color: white;
+        }
+
+        .feedback-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .feedback-section.correct .feedback-title {
+            color: #047857;
+        }
+
+        .feedback-section.incorrect .feedback-title {
+            color: #dc2626;
+        }
+
+        .feedback-text {
+            color: var(--color-text-light);
+            font-size: 0.95rem;
+        }
+
+        .feedback-text strong {
+            color: var(--color-text);
+        }
+
+        /* Next Button */
+        .flashcard-next-section {
+            display: none;
+            margin-top: 1.5rem;
+            text-align: center;
+        }
+
+        .flashcard-next-section.show {
+            display: block;
+        }
+
+        .btn-next-card {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, var(--color-primary), #a33356);
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(139, 41, 66, 0.3);
+        }
+
+        .btn-next-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(139, 41, 66, 0.4);
+        }
+
+        .btn-next-card svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Results Screen */
+        .flashcard-results-screen {
+            display: none;
+            text-align: center;
+            padding: 3rem 2rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .flashcard-results-screen.active {
+            display: block;
+        }
+
+        .results-icon {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 2rem;
+        }
+
+        .results-icon.excellent {
+            background: linear-gradient(135deg, #10b981, #059669);
+            box-shadow: 0 20px 40px rgba(16, 185, 129, 0.3);
+        }
+
+        .results-icon.good {
+            background: linear-gradient(135deg, var(--color-secondary), #c99a3d);
+            box-shadow: 0 20px 40px rgba(212, 168, 75, 0.3);
+        }
+
+        .results-icon.average {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            box-shadow: 0 20px 40px rgba(245, 158, 11, 0.3);
+        }
+
+        .results-icon.needs-practice {
+            background: linear-gradient(135deg, var(--color-primary), #a33356);
+            box-shadow: 0 20px 40px rgba(139, 41, 66, 0.3);
+        }
+
+        .results-icon svg {
+            width: 70px;
+            height: 70px;
+            color: white;
+        }
+
+        .results-title {
+            font-family: var(--font-display);
+            font-size: 2.5rem;
+            color: var(--color-text);
+            margin-bottom: 0.5rem;
+        }
+
+        .results-subtitle {
+            color: var(--color-text-light);
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+        }
+
+        .results-score-card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .score-circle {
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            margin: 0 auto 1.5rem;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .score-circle svg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+
+        .score-circle circle {
+            fill: none;
+            stroke-width: 8;
+        }
+
+        .score-circle .bg {
+            stroke: var(--color-border);
+        }
+
+        .score-circle .progress {
+            stroke: var(--color-primary);
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1s ease;
+        }
+
+        .score-value {
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--color-primary);
+        }
+
+        .score-value span {
+            font-size: 1.5rem;
+            color: var(--color-text-light);
+        }
+
+        .score-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--color-border);
+        }
+
+        .score-stat {
+            text-align: center;
+        }
+
+        .score-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .score-stat-value.correct-val { color: #10b981; }
+        .score-stat-value.incorrect-val { color: #ef4444; }
+        .score-stat-value.total-val { color: var(--color-secondary); }
+
+        .score-stat-label {
+            font-size: 0.85rem;
+            color: var(--color-text-light);
+            margin-top: 0.25rem;
+        }
+
+        .results-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-restart {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, var(--color-primary), #a33356);
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(139, 41, 66, 0.3);
+        }
+
+        .btn-restart:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(139, 41, 66, 0.4);
+        }
+
+        .btn-home {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem 2rem;
+            background: var(--color-surface);
+            color: var(--color-text);
+            font-size: 1rem;
+            font-weight: 600;
+            border: 2px solid var(--color-border);
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .btn-home:hover {
+            border-color: var(--color-primary);
+            color: var(--color-primary);
+        }
+
+        .btn-restart svg,
+        .btn-home svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .flashcard-start-screen {
+                padding: 2rem 1rem;
+            }
+
+            .flashcard-start-icon {
+                width: 100px;
+                height: 100px;
+            }
+
+            .flashcard-start-icon svg {
+                width: 50px;
+                height: 50px;
+            }
+
+            .flashcard-start-screen h1 {
+                font-size: 1.75rem;
+            }
+
+            .flashcard-start-screen p {
+                font-size: 1rem;
+            }
+
+            .flashcard-info-cards {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+
+            .flashcard-info-card {
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+                text-align: left;
+                padding: 1rem;
+            }
+
+            .flashcard-info-card svg {
+                margin-bottom: 0;
+            }
+
+            .flashcard-image-section {
+                padding: 1.5rem;
+                min-height: 260px;
+            }
+
+            .flashcard-image {
+                max-width: 220px;
+                max-height: 220px;
+            }
+
+            .flashcard-content {
+                padding: 1.25rem 1.5rem 1.5rem;
+            }
+
+            .flashcard-question {
+                font-size: 1.1rem;
+            }
+
+            .flashcard-options {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+
+            .flashcard-option {
+                padding: 0.875rem 1rem;
+            }
+
+            .results-icon {
+                width: 120px;
+                height: 120px;
+            }
+
+            .results-icon svg {
+                width: 60px;
+                height: 60px;
+            }
+
+            .results-title {
+                font-size: 1.75rem;
+            }
+
+            .score-circle {
+                width: 140px;
+                height: 140px;
+            }
+
+            .score-value {
+                font-size: 2.5rem;
+            }
+
+            .results-actions {
+                flex-direction: column;
+            }
+
+            .btn-restart,
+            .btn-home {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .flashcard-container {
+                padding: 1rem 0 3rem;
+            }
+
+            .flashcard-start-screen h1 {
+                font-size: 1.5rem;
+            }
+
+            .flashcard-number {
+                font-size: 0.75rem;
+                padding: 0.4rem 0.8rem;
+            }
+
+            .flashcard-hint-btn {
+                font-size: 0.75rem;
+                padding: 0.4rem 0.75rem;
+            }
+
+            .flashcard-image-section {
+                min-height: 220px;
+                padding: 1rem;
+            }
+
+            .flashcard-image {
+                max-width: 180px;
+                max-height: 180px;
+            }
+
+            .flashcard-question {
+                font-size: 1rem;
+                margin-bottom: 1rem;
+            }
+
+            .flashcard-option {
+                font-size: 0.9rem;
+                padding: 0.75rem;
+            }
+
+            .feedback-section {
+                padding: 1rem;
+            }
+
+            .feedback-icon {
+                width: 40px;
+                height: 40px;
+            }
+
+            .feedback-icon svg {
+                width: 20px;
+                height: 20px;
+            }
+
+            .feedback-title {
+                font-size: 1.1rem;
+            }
+
+            .results-score-card {
+                padding: 1.5rem;
+            }
+
+            .score-circle {
+                width: 120px;
+                height: 120px;
+            }
+
+            .score-value {
+                font-size: 2rem;
+            }
+
+            .score-value span {
+                font-size: 1.25rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar scrolled">
+        <div class="container">
+            <a href="../../index.html" class="logo">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+                        <path d="M12 6v6l4 2"/>
+                    </svg>
+                </div>
+                <span class="logo-text">Mudra Academy</span>
+            </a>
+            
+            <ul class="nav-links">
+                <li><a href="../../index.html#features">Features</a></li>
+                <li><a href="../../index.html#games">Games</a></li>
+                <li><a href="../../index.html#webcam">Live Detection</a></li>
+                <li><a href="../library.html">Library</a></li>
+            </ul>
+            
+            <div class="nav-cta">
+                <a href="../learn.html" class="btn btn-primary">Start Learning</a>
+            </div>
+            
+            <button class="mobile-menu-btn" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Page Header -->
+    <section class="page-header">
+        <div class="container">
+            <div class="page-header-content">
+                <nav class="breadcrumb">
+                    <a href="../../index.html">Home</a>
+                    <span>/</span>
+                    <a href="../../index.html#games">Games</a>
+                    <span>/</span>
+                    <span>Flashcards</span>
+                </nav>
+                <h1>Mudra Flashcards</h1>
+                <p>Identify mudras from images and master your recognition skills</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Flashcard Container -->
+    <section class="flashcard-container">
+        <div class="container">
+            <!-- Start Screen -->
+            <div class="flashcard-start-screen" id="startScreen">
+                <div class="flashcard-start-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                        <line x1="8" y1="21" x2="16" y2="21"/>
+                        <line x1="12" y1="17" x2="12" y2="21"/>
+                    </svg>
+                </div>
+                <h1>Visual Mudra Recognition</h1>
+                <p>See a mudra image, identify its name. Train your eyes to recognize the 27 Asamyukta Hasta mudras through visual practice.</p>
+                
+                <div class="flashcard-info-cards">
+                    <div class="flashcard-info-card">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                            <circle cx="8.5" cy="8.5" r="1.5"/>
+                            <polyline points="21 15 16 10 5 21"/>
+                        </svg>
+                        <div>
+                            <span>10</span>
+                            <small>Flashcards</small>
+                        </div>
+                    </div>
+                    <div class="flashcard-info-card">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                        <div>
+                            <span>Visual</span>
+                            <small>Learning</small>
+                        </div>
+                    </div>
+                    <div class="flashcard-info-card">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                        <div>
+                            <span>Hints</span>
+                            <small>Available</small>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn-start-flashcard" onclick="startGame()">
+                    <span>Start Practice</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 3 19 12 5 21 5 3"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Game Area -->
+            <div class="flashcard-game-area" id="gameArea">
+                <!-- Progress Section -->
+                <div class="flashcard-progress-section">
+                    <div class="flashcard-progress-header">
+                        <span class="flashcard-progress-text">Card <span id="currentCard">1</span> of <span id="totalCards">10</span></span>
+                        <span class="flashcard-score-text">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                            </svg>
+                            <span id="currentScore">0</span> Correct
+                        </span>
+                    </div>
+                    <div class="flashcard-progress-bar">
+                        <div class="flashcard-progress-fill" id="progressFill"></div>
+                    </div>
+                </div>
+
+                <!-- Flashcard -->
+                <div class="flashcard-wrapper">
+                    <div class="flashcard">
+                        <div class="flashcard-image-section">
+                            <div class="flashcard-number">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                                    <polyline points="21 15 16 10 5 21"/>
+                                </svg>
+                                <span>Card <span id="cardNum">1</span></span>
+                            </div>
+                            <button class="flashcard-hint-btn" id="hintBtn" onclick="showHint()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                                </svg>
+                                <span>Hint</span>
+                            </button>
+                            <img src="" alt="Mudra Image" class="flashcard-image" id="mudraImage">
+                        </div>
+                        <div class="flashcard-content">
+                            <h2 class="flashcard-question">What mudra is shown in this image?</h2>
+                            
+                            <div class="hint-box" id="hintBox">
+                                <p>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="12" r="10"/>
+                                        <line x1="12" y1="16" x2="12" y2="12"/>
+                                        <line x1="12" y1="8" x2="12.01" y2="8"/>
+                                    </svg>
+                                    <span id="hintText"></span>
+                                </p>
+                            </div>
+
+                            <div class="flashcard-options" id="optionsContainer">
+                                <!-- Options will be dynamically inserted -->
+                            </div>
+
+                            <div class="feedback-section" id="feedbackSection">
+                                <div class="feedback-icon">
+                                    <svg id="feedbackIconCorrect" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                    <svg id="feedbackIconIncorrect" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+                                        <line x1="18" y1="6" x2="6" y2="18"/>
+                                        <line x1="6" y1="6" x2="18" y2="18"/>
+                                    </svg>
+                                </div>
+                                <h3 class="feedback-title" id="feedbackTitle">Correct!</h3>
+                                <p class="feedback-text" id="feedbackText"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Next Button -->
+                <div class="flashcard-next-section" id="nextSection">
+                    <button class="btn-next-card" id="nextBtn" onclick="nextCard()">
+                        <span>Next Card</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                            <polyline points="12 5 19 12 12 19"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Screen -->
+            <div class="flashcard-results-screen" id="resultsScreen">
+                <div class="results-icon" id="resultsIcon">
+                    <svg id="resultsIconSvg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                </div>
+                <h2 class="results-title" id="resultsTitle">Great Job!</h2>
+                <p class="results-subtitle" id="resultsSubtitle">You've completed the flashcards</p>
+
+                <div class="results-score-card">
+                    <div class="score-circle">
+                        <svg viewBox="0 0 100 100">
+                            <circle class="bg" cx="50" cy="50" r="45"/>
+                            <circle class="progress" id="scoreCircle" cx="50" cy="50" r="45" stroke-dasharray="283" stroke-dashoffset="283"/>
+                        </svg>
+                        <div class="score-value">
+                            <span id="finalScore">0</span><span>/10</span>
+                        </div>
+                    </div>
+
+                    <div class="score-stats">
+                        <div class="score-stat">
+                            <div class="score-stat-value correct-val" id="correctCount">0</div>
+                            <div class="score-stat-label">Correct</div>
+                        </div>
+                        <div class="score-stat">
+                            <div class="score-stat-value incorrect-val" id="incorrectCount">0</div>
+                            <div class="score-stat-label">Incorrect</div>
+                        </div>
+                        <div class="score-stat">
+                            <div class="score-stat-value total-val" id="percentageScore">0%</div>
+                            <div class="score-stat-label">Score</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="results-actions">
+                    <button class="btn-restart" onclick="restartGame()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 4 23 10 17 10"/>
+                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                        </svg>
+                        <span>Practice Again</span>
+                    </button>
+                    <a href="../../index.html#games" class="btn-home">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                            <polyline points="9 22 9 12 15 12 15 22"/>
+                        </svg>
+                        <span>More Games</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-bottom" style="border-top: none; padding-top: 0;">
+                <p>2025 Mudra Academy. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../../js/main.js"></script>
+    <script>
+        // Mudra Database with images and hints
+        const mudraDatabase = [
+            { name: "Pataka", image: "Pataka.jpg", hint: "Flag - All fingers extended together", translation: "Flag" },
+            { name: "Tripataka", image: "Tripataka.jpg", hint: "Three parts of a flag - Ring finger bent", translation: "Three-part Flag" },
+            { name: "Ardhapataka", image: "Ardhapataka.jpg", hint: "Half flag - Little finger bent", translation: "Half Flag" },
+            { name: "Kartarimukha", image: "Kartarimukha.jpg", hint: "Scissor face - Index and middle fingers separated", translation: "Scissor Face" },
+            { name: "Mayura", image: "Mayura.jpg", hint: "Peacock - Ring finger touches thumb", translation: "Peacock" },
+            { name: "Ardhachandra", image: "Ardhachandra.jpg", hint: "Half moon - Thumb extended from Pataka", translation: "Half Moon" },
+            { name: "Arala", image: "Arala.jpg", hint: "Bent - Index finger curved inward", translation: "Bent" },
+            { name: "Shukatunda", image: "Sukatunda.jpg", hint: "Parrot beak - Ring finger bent to touch thumb", translation: "Parrot Beak" },
+            { name: "Mushti", image: "Musti.jpg", hint: "Fist - All fingers clenched", translation: "Fist" },
+            { name: "Shikhara", image: "Sikharam.jpg", hint: "Peak/Crest - Thumb raised, others folded", translation: "Peak" },
+            { name: "Kapitta", image: "Kapittha.jpg", hint: "Elephant apple - Index finger bent over thumb", translation: "Elephant Apple" },
+            { name: "Katakamukha", image: "Katakamukha.jpg", hint: "Bracelet - Ring and little fingers raised", translation: "Bracelet Opening" },
+            { name: "Suchi", image: "Suchi.jpg", hint: "Needle - Only index finger extended", translation: "Needle" },
+            { name: "Chandrakala", image: "Chandrakala.jpg", hint: "Moon digit - Thumb separated from Pataka", translation: "Moon Digit" },
+            { name: "Padmakosha", image: "Padmakosa.jpg", hint: "Lotus bud - Fingers curved forming hollow", translation: "Lotus Bud" },
+            { name: "Sarpashirsha", image: "Sarpashirsa.jpg", hint: "Serpent head - Fingers curved like snake hood", translation: "Serpent Head" },
+            { name: "Mrigashirsha", image: "Mrugashirsha-Hasta.jpg", hint: "Deer head - Index and middle extended", translation: "Deer Head" },
+            { name: "Simhamukha", image: "Simhamukha.jpg", hint: "Lion face - Fingers spread like mane", translation: "Lion Face" },
+            { name: "Kangula", image: "Kangula.jpg", hint: "Small bell - Ring finger touches thumb base", translation: "Bell" },
+            { name: "Alapadma", image: "Alapadma.jpg", hint: "Bloomed lotus - All fingers spread wide", translation: "Open Lotus" },
+            { name: "Chatura", image: "Chautra.jpg", hint: "Clever - Thumb touches ring finger", translation: "Square/Clever" },
+            { name: "Bhramara", image: "Bharma.jpg", hint: "Bee - Middle finger bent inward", translation: "Bee" },
+            { name: "Hamsasya", image: "Hamsasya.jpg", hint: "Swan beak - Thumb and index touch lightly", translation: "Swan Face" },
+            { name: "Hamsapaksha", image: "Hamsapaksa.jpg", hint: "Swan wing - Fingers spread sideways", translation: "Swan Wing" },
+            { name: "Mukula", image: "Mukula.jpg", hint: "Bud - All fingertips touch together", translation: "Bud" },
+            { name: "Tamrachuda", image: "Tamracuda.jpg", hint: "Rooster - Ring finger bent", translation: "Rooster Crest" },
+            { name: "Trishula", image: "Trisula.jpg", hint: "Trident - Three fingers extended upward", translation: "Trident" }
+        ];
+
+        // Game State
+        let currentCardIndex = 0;
+        let score = 0;
+        let selectedCards = [];
+        let answered = false;
+        let hintUsed = false;
+
+        // Shuffle array
+        function shuffleArray(array) {
+            const shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
+        // Get random wrong options
+        function getWrongOptions(correctMudra, count) {
+            const otherMudras = mudraDatabase.filter(m => m.name !== correctMudra.name);
+            return shuffleArray(otherMudras).slice(0, count);
+        }
+
+        // Start Game
+        function startGame() {
+            selectedCards = shuffleArray(mudraDatabase).slice(0, 10);
+            currentCardIndex = 0;
+            score = 0;
+            answered = false;
+            hintUsed = false;
+
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('gameArea').classList.add('active');
+            document.getElementById('resultsScreen').classList.remove('active');
+
+            document.getElementById('currentScore').textContent = '0';
+            
+            loadCard();
+        }
+
+        // Load Card
+        function loadCard() {
+            answered = false;
+            hintUsed = false;
+            const card = selectedCards[currentCardIndex];
+            
+            // Update progress
+            document.getElementById('currentCard').textContent = currentCardIndex + 1;
+            document.getElementById('cardNum').textContent = currentCardIndex + 1;
+            document.getElementById('progressFill').style.width = ((currentCardIndex) / 10 * 100) + '%';
+
+            // Set image
+            document.getElementById('mudraImage').src = '../../assets/images/Mudras/' + card.image;
+            document.getElementById('mudraImage').alt = card.name + ' Mudra';
+
+            // Set hint
+            document.getElementById('hintText').textContent = card.hint;
+            document.getElementById('hintBox').classList.remove('show');
+            document.getElementById('hintBtn').style.display = 'flex';
+
+            // Generate options (1 correct + 3 wrong)
+            const wrongOptions = getWrongOptions(card, 3);
+            const allOptions = shuffleArray([card, ...wrongOptions]);
+
+            const optionsContainer = document.getElementById('optionsContainer');
+            optionsContainer.innerHTML = '';
+            
+            allOptions.forEach((option, index) => {
+                const optionEl = document.createElement('div');
+                optionEl.className = 'flashcard-option';
+                optionEl.dataset.name = option.name;
+                optionEl.innerHTML = `
+                    <span class="option-name">${option.name}</span>
+                    <svg class="option-icon correct-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <svg class="option-icon incorrect-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                `;
+                optionEl.addEventListener('click', () => selectOption(option.name));
+                optionsContainer.appendChild(optionEl);
+            });
+
+            // Hide feedback and next button
+            document.getElementById('feedbackSection').classList.remove('show', 'correct', 'incorrect');
+            document.getElementById('nextSection').classList.remove('show');
+
+            // Update next button text
+            const nextBtn = document.getElementById('nextBtn');
+            if (currentCardIndex === 9) {
+                nextBtn.innerHTML = `
+                    <span>See Results</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                `;
+            } else {
+                nextBtn.innerHTML = `
+                    <span>Next Card</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                        <polyline points="12 5 19 12 12 19"/>
+                    </svg>
+                `;
+            }
+        }
+
+        // Show Hint
+        function showHint() {
+            if (!answered) {
+                hintUsed = true;
+                document.getElementById('hintBox').classList.add('show');
+                document.getElementById('hintBtn').style.display = 'none';
+            }
+        }
+
+        // Select Option
+        function selectOption(selectedName) {
+            if (answered) return;
+            answered = true;
+
+            const correctMudra = selectedCards[currentCardIndex];
+            const options = document.querySelectorAll('.flashcard-option');
+            const feedbackSection = document.getElementById('feedbackSection');
+            const feedbackTitle = document.getElementById('feedbackTitle');
+            const feedbackText = document.getElementById('feedbackText');
+            
+            // Disable all options
+            options.forEach(opt => opt.classList.add('disabled'));
+
+            // Find and mark selected option
+            options.forEach(opt => {
+                if (opt.dataset.name === selectedName) {
+                    opt.classList.add('selected');
+                }
+            });
+
+            // Check if correct
+            const isCorrect = selectedName === correctMudra.name;
+            
+            if (isCorrect) {
+                // Mark correct
+                options.forEach(opt => {
+                    if (opt.dataset.name === selectedName) {
+                        opt.classList.add('correct');
+                    }
+                });
+                score++;
+                document.getElementById('currentScore').textContent = score;
+
+                // Show correct feedback
+                feedbackSection.classList.remove('incorrect');
+                feedbackSection.classList.add('show', 'correct');
+                feedbackTitle.textContent = 'Correct!';
+                feedbackText.innerHTML = `<strong>${correctMudra.name}</strong> (${correctMudra.translation}) - ${correctMudra.hint}`;
+                
+                document.getElementById('feedbackIconCorrect').style.display = 'block';
+                document.getElementById('feedbackIconIncorrect').style.display = 'none';
+            } else {
+                // Mark incorrect and show correct answer
+                options.forEach(opt => {
+                    if (opt.dataset.name === selectedName) {
+                        opt.classList.add('incorrect');
+                    }
+                    if (opt.dataset.name === correctMudra.name) {
+                        opt.classList.add('correct', 'highlight');
+                    }
+                });
+
+                // Show incorrect feedback
+                feedbackSection.classList.remove('correct');
+                feedbackSection.classList.add('show', 'incorrect');
+                feedbackTitle.textContent = 'Not Quite!';
+                feedbackText.innerHTML = `The correct answer is <strong>${correctMudra.name}</strong> (${correctMudra.translation})`;
+                
+                document.getElementById('feedbackIconCorrect').style.display = 'none';
+                document.getElementById('feedbackIconIncorrect').style.display = 'block';
+            }
+
+            // Show next button
+            document.getElementById('nextSection').classList.add('show');
+        }
+
+        // Next Card
+        function nextCard() {
+            currentCardIndex++;
+            
+            if (currentCardIndex >= 10) {
+                showResults();
+            } else {
+                loadCard();
+            }
+        }
+
+        // Show Results
+        function showResults() {
+            document.getElementById('gameArea').classList.remove('active');
+            document.getElementById('resultsScreen').classList.add('active');
+
+            const correct = score;
+            const incorrect = 10 - score;
+            const percentage = (score / 10) * 100;
+
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('correctCount').textContent = correct;
+            document.getElementById('incorrectCount').textContent = incorrect;
+            document.getElementById('percentageScore').textContent = percentage + '%';
+
+            // Animate score circle
+            const circumference = 2 * Math.PI * 45;
+            const offset = circumference - (percentage / 100) * circumference;
+            setTimeout(() => {
+                document.getElementById('scoreCircle').style.strokeDashoffset = offset;
+            }, 100);
+
+            // Set result icon and message
+            const resultsIcon = document.getElementById('resultsIcon');
+            const resultsTitle = document.getElementById('resultsTitle');
+            const resultsSubtitle = document.getElementById('resultsSubtitle');
+            const iconSvg = document.getElementById('resultsIconSvg');
+
+            resultsIcon.className = 'results-icon';
+
+            if (score >= 9) {
+                resultsIcon.classList.add('excellent');
+                resultsTitle.textContent = 'Excellent!';
+                resultsSubtitle.textContent = 'Your visual recognition is outstanding!';
+                iconSvg.innerHTML = '<path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>';
+            } else if (score >= 7) {
+                resultsIcon.classList.add('good');
+                resultsTitle.textContent = 'Great Job!';
+                resultsSubtitle.textContent = 'You recognize mudras well!';
+                iconSvg.innerHTML = '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>';
+            } else if (score >= 5) {
+                resultsIcon.classList.add('average');
+                resultsTitle.textContent = 'Good Effort!';
+                resultsSubtitle.textContent = 'Keep practicing your recognition!';
+                iconSvg.innerHTML = '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>';
+            } else {
+                resultsIcon.classList.add('needs-practice');
+                resultsTitle.textContent = 'Keep Learning!';
+                resultsSubtitle.textContent = 'Visit the library to study the mudras!';
+                iconSvg.innerHTML = '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>';
+            }
+        }
+
+        // Restart Game
+        function restartGame() {
+            document.getElementById('scoreCircle').style.strokeDashoffset = 283;
+            
+            setTimeout(() => {
+                startGame();
+            }, 100);
+        }
+
+        // Initialize mobile menu
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
+            const navLinks = document.querySelector('.nav-links');
+            
+            if (mobileMenuBtn && navLinks) {
+                mobileMenuBtn.addEventListener('click', function() {
+                    navLinks.classList.toggle('active');
+                    this.classList.toggle('active');
+                });
+            }
+        });
+    </script>
+</body>
+</html>
