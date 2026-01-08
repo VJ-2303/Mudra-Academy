@@ -3,509 +3,522 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Mudra Detection - Mudra Academy</title>
+    <meta name="description" content="Practice Bharatanatyam mudras with real-time AI detection">
+    <title>Live Detection - Mudra Academy</title>
     
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/pages.css">
     
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%238B2942' width='100' height='100' rx='20'/%3E%3Ctext x='50' y='65' font-size='50' text-anchor='middle' fill='%23D4A84B' font-family='serif'%3EM%3C/text%3E%3C/svg%3E">
+
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        :root {
-            --color-primary: #8B2942;
-            --color-secondary: #D4A84B;
-            --color-bg: #FFF8F0;
-            --color-white: #FFFFFF;
-            --color-text: #2C1810;
-            --color-text-light: #6B5544;
-            --color-success: #16a34a;
-            --color-warning: #ca8a04;
-            --color-error: #dc2626;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #FFF8F0 0%, #FFE8D6 100%);
-            color: var(--color-text);
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        /* Navigation */
-        nav {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 1rem 2rem;
-            box-shadow: 0 2px 20px rgba(139, 41, 66, 0.1);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .nav-container {
-            max-width: 1400px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--color-primary);
-            text-decoration: none;
-        }
-
-        .nav-links a {
-            color: var(--color-text);
-            text-decoration: none;
-            margin-left: 1.5rem;
-            font-weight: 500;
-            transition: color 0.3s ease;
-            font-size: 0.9rem;
-        }
-
-        .nav-links a:hover {
-            color: var(--color-primary);
-        }
-
-        /* Main Layout */
-        .detection-container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 2rem;
+        .detection-layout {
             display: grid;
-            grid-template-columns: 1fr 350px;
-            gap: 2rem;
-            min-height: calc(100vh - 80px);
+            grid-template-columns: 1fr 320px;
+            gap: var(--spacing-xl);
+            max-width: 1200px;
+            margin: 0 auto;
         }
-
-        /* Video Section */
-        .video-section {
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
-
         .video-container {
-            background: var(--color-white);
-            border-radius: 20px;
-            padding: 1.5rem;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-            position: relative;
-        }
-
-        .video-wrapper {
-            position: relative;
-            width: 100%;
-            border-radius: 15px;
+            background: var(--color-dark);
+            border-radius: var(--radius-lg);
             overflow: hidden;
-            background: #000;
+            position: relative;
             aspect-ratio: 4/3;
         }
-
         #webcam {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transform: scaleX(-1); /* Mirror effect */
+            transform: scaleX(-1);
         }
-
-        #canvas {
+        #canvas { display: none; }
+        .video-placeholder {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            transform: scaleX(-1); /* Mirror effect */
-        }
-
-        .video-controls {
-            display: flex;
-            gap: 1rem;
-            margin-top: 1rem;
-            flex-wrap: wrap;
-        }
-
-        .control-btn {
-            flex: 1;
-            min-width: 120px;
-            padding: 0.8rem 1.5rem;
-            border: none;
-            border-radius: 50px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 0.95rem;
-        }
-
-        .btn-primary {
-            background: var(--color-primary);
-            color: var(--color-white);
-            box-shadow: 0 4px 15px rgba(139, 41, 66, 0.3);
-        }
-
-        .btn-primary:hover {
-            background: #6d1f34;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(139, 41, 66, 0.4);
-        }
-
-        .btn-secondary {
-            background: var(--color-white);
-            color: var(--color-primary);
-            border: 2px solid var(--color-primary);
-        }
-
-        .btn-secondary:hover {
-            background: var(--color-primary);
-            color: var(--color-white);
-        }
-
-        .btn-danger {
-            background: var(--color-error);
-            color: var(--color-white);
-        }
-
-        .btn-danger:hover {
-            background: #b91c1c;
-        }
-
-        .control-btn:disabled {
-            opacity: 0.5;
-            cursor: not-started;
-        }
-
-        /* Detection Result */
-        .result-display {
-            background: linear-gradient(135deg, var(--color-primary), #6d1f34);
-            border-radius: 15px;
-            padding: 2rem;
-            color: var(--color-white);
-            text-align: center;
-            box-shadow: 0 10px 30px rgba(139, 41, 66, 0.3);
-        }
-
-        .result-mudra {
-            font-family: 'Playfair Display', serif;
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
-            font-weight: 700;
-        }
-
-        .result-confidence {
-            font-size: 1.2rem;
-            opacity: 0.9;
-            margin-bottom: 0.5rem;
-        }
-
-        .result-method {
-            font-size: 0.9rem;
-            opacity: 0.7;
-            display: inline-block;
-            padding: 0.3rem 0.8rem;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 20px;
-            margin-top: 0.5rem;
-        }
-
-        /* Sidebar */
-        .sidebar {
+            inset: 0;
             display: flex;
             flex-direction: column;
-            gap: 1.5rem;
+            align-items: center;
+            justify-content: center;
+            background: var(--color-dark);
+            color: var(--color-light);
         }
-
-        .info-card {
-            background: var(--color-white);
-            border-radius: 15px;
-            padding: 1.5rem;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+        .video-placeholder svg {
+            width: 64px;
+            height: 64px;
+            color: var(--color-secondary);
+            margin-bottom: var(--spacing-lg);
         }
-
-        .info-card h3 {
-            font-family: 'Playfair Display', serif;
+        .video-placeholder h3 {
+            font-family: var(--font-heading);
+            margin-bottom: var(--spacing-sm);
+        }
+        .video-placeholder p {
+            color: var(--color-gray);
+        }
+        .mudra-label {
+            position: absolute;
+            bottom: var(--spacing-md);
+            left: var(--spacing-md);
+            font-family: var(--font-heading);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--color-light);
+            text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+        }
+        .controls {
+            display: flex;
+            gap: var(--spacing-md);
+            justify-content: center;
+            margin-top: var(--spacing-lg);
+        }
+        .control-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-md) var(--spacing-xl);
+            border: none;
+            border-radius: var(--radius-full);
+            font-family: var(--font-body);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-base);
+        }
+        .control-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+        .btn-start {
+            background: var(--color-primary);
+            color: var(--color-light);
+        }
+        .btn-start:hover {
+            background: var(--color-primary-dark);
+            box-shadow: var(--shadow-primary);
+        }
+        .btn-stop {
+            background: #ef4444;
+            color: var(--color-light);
+        }
+        .btn-stop:hover { background: #dc2626; }
+        .btn-reset {
+            background: var(--color-light);
+            color: var(--color-dark);
+            border: 2px solid var(--color-gray-light);
+        }
+        .btn-reset:hover {
+            border-color: var(--color-primary);
             color: var(--color-primary);
-            margin-bottom: 1rem;
-            font-size: 1.3rem;
         }
-
+        .sidebar-card {
+            background: var(--color-light);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            border: 1px solid rgba(139, 41, 66, 0.1);
+        }
+        .sidebar-card + .sidebar-card {
+            margin-top: var(--spacing-lg);
+        }
+        .sidebar-card h3 {
+            font-family: var(--font-heading);
+            font-size: 1.1rem;
+            color: var(--color-primary);
+            margin-bottom: var(--spacing-md);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        .sidebar-card h3 svg {
+            width: 18px;
+            height: 18px;
+            color: var(--color-secondary);
+        }
+        .api-status {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            background: var(--color-light-warm);
+            border-radius: var(--radius-md);
+            font-size: 0.85rem;
+        }
+        .api-status.connected { background: #dcfce7; color: #166534; }
+        .api-status.error { background: #fee2e2; color: #991b1b; }
+        .current-mudra-display {
+            text-align: center;
+            padding: var(--spacing-md) 0;
+        }
+        .current-mudra-display h4 {
+            font-family: var(--font-heading);
+            font-size: 1.25rem;
+            color: var(--color-dark);
+            margin-bottom: var(--spacing-xs);
+        }
+        .current-mudra-display p {
+            color: var(--color-gray);
+            font-size: 0.9rem;
+        }
         .stats-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 1rem;
+            gap: var(--spacing-md);
         }
-
-        .stat-item {
+        .stat-box {
             text-align: center;
-            padding: 1rem;
-            background: rgba(139, 41, 66, 0.05);
-            border-radius: 10px;
+            padding: var(--spacing-md);
+            background: var(--color-light-warm);
+            border-radius: var(--radius-md);
         }
-
         .stat-value {
-            font-size: 1.8rem;
+            font-size: 1.5rem;
             font-weight: 700;
             color: var(--color-primary);
         }
-
         .stat-label {
-            font-size: 0.85rem;
-            color: var(--color-text-light);
-            margin-top: 0.3rem;
+            font-size: 0.75rem;
+            color: var(--color-gray);
+            margin-top: var(--spacing-xs);
         }
-
-        .fps-indicator {
-            display: inline-block;
-            padding: 0.3rem 0.8rem;
-            background: var(--color-success);
-            color: white;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-
-        /* Mudra Library Preview */
-        .mudra-preview {
-            max-height: 300px;
+        .history-list {
+            max-height: 200px;
             overflow-y: auto;
         }
-
-        .mudra-list {
+        .history-item {
             display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm) 0;
+            border-bottom: 1px solid var(--color-gray-light);
         }
-
-        .mudra-item {
-            padding: 0.7rem;
-            background: rgba(212, 168, 75, 0.1);
-            border-radius: 8px;
-            font-size: 0.9rem;
-            color: var(--color-text);
-            border-left: 3px solid var(--color-secondary);
-            transition: all 0.2s ease;
-            cursor: pointer;
-        }
-
-        .mudra-item:hover {
-            background: rgba(212, 168, 75, 0.2);
-            transform: translateX(5px);
-        }
-
-        .mudra-item.detected {
-            background: rgba(22, 163, 74, 0.1);
-            border-left-color: var(--color-success);
+        .history-item:last-child { border-bottom: none; }
+        .history-abbr {
+            width: 32px;
+            height: 32px;
+            background: var(--gradient-card);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-weight: 600;
+            font-size: 0.75rem;
+            color: var(--color-primary);
         }
-
-        /* Status Messages */
-        .status-message {
+        .history-info { flex: 1; }
+        .history-name { font-weight: 500; font-size: 0.9rem; }
+        .history-time { font-size: 0.75rem; color: var(--color-gray); }
+        .history-conf { font-size: 0.85rem; font-weight: 600; color: var(--color-secondary); }
+        .empty-state {
             text-align: center;
-            padding: 1.5rem;
-            border-radius: 10px;
-            margin: 1rem 0;
-            font-weight: 500;
+            color: var(--color-gray);
+            padding: var(--spacing-lg) 0;
+            font-size: 0.9rem;
         }
-
-        .status-info {
-            background: rgba(59, 130, 246, 0.1);
-            color: #2563eb;
-        }
-
-        .status-success {
-            background: rgba(22, 163, 74, 0.1);
-            color: var(--color-success);
-        }
-
-        .status-error {
-            background: rgba(220, 38, 38, 0.1);
-            color: var(--color-error);
-        }
-
-        /* Loading Spinner */
-        .spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* Responsive Design */
-        @media (max-width: 1024px) {
-            .detection-container {
+        @media (max-width: 900px) {
+            .detection-layout {
                 grid-template-columns: 1fr;
             }
-
-            .sidebar {
-                order: -1;
-            }
-
-            .stats-grid {
-                grid-template-columns: repeat(4, 1fr);
-            }
-        }
-
-        @media (max-width: 768px) {
-            .detection-container {
-                padding: 1rem;
-            }
-
-            .result-mudra {
-                font-size: 2rem;
-            }
-
-            .video-controls {
-                flex-direction: column;
-            }
-
-            .control-btn {
-                width: 100%;
-            }
-
-            .nav-links {
-                display: none;
-            }
-
-            .stats-grid {
-                grid-template-columns: 1fr 1fr;
-            }
-        }
-
-        /* Pulse Animation for Active Detection */
-        @keyframes pulse-border {
-            0%, 100% {
-                box-shadow: 0 0 0 0 rgba(139, 41, 66, 0.7);
-            }
-            50% {
-                box-shadow: 0 0 0 15px rgba(139, 41, 66, 0);
-            }
-        }
-
-        .video-container.detecting {
-            animation: pulse-border 2s infinite;
         }
     </style>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav>
-        <div class="nav-container">
-            <a href="../index.html" class="logo">Mudra Academy</a>
-            <div class="nav-links">
-                <a href="detection-mode.html">← Back</a>
-                <a href="library.html">Library</a>
-                <a href="games/quiz.html">Games</a>
+    <nav class="navbar scrolled">
+        <div class="container">
+            <a href="../index.html" class="logo">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+                        <path d="M12 6v6l4 2"/>
+                    </svg>
+                </div>
+                <span class="logo-text">Mudra Academy</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="../index.html#features">Features</a></li>
+                <li><a href="../index.html#games">Games</a></li>
+                <li><a href="detection-mode.html" class="active">Live Detection</a></li>
+                <li><a href="library.html">Library</a></li>
+            </ul>
+            <div class="nav-cta">
+                <a href="learn.html" class="btn btn-primary">Start Learning</a>
             </div>
+            <button class="mobile-menu-btn" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
         </div>
     </nav>
 
-    <!-- Main Detection Interface -->
-    <div class="detection-container">
-        <!-- Video Section -->
-        <div class="video-section">
-            <!-- Video Container -->
-            <div class="video-container" id="videoContainer">
-                <div class="video-wrapper">
-                    <video id="webcam" autoplay playsinline></video>
-                    <canvas id="canvas"></canvas>
-                </div>
-            </div>
-
-            <!-- Video Controls -->
-            <div class="video-controls">
-                <button class="control-btn btn-primary" id="startBtn" onclick="startDetection()">
-                    <span id="startBtnText">🚀 Start Detection</span>
-                </button>
-                <button class="control-btn btn-secondary" id="pauseBtn" onclick="togglePause()" disabled>
-                    <span id="pauseBtnText">⏸️ Pause</span>
-                </button>
-                <button class="control-btn btn-danger" id="stopBtn" onclick="stopDetection()" disabled>
-                    🛑 Stop
-                </button>
-            </div>
-
-            <!-- Detection Result -->
-            <div class="result-display">
-                <div class="result-mudra" id="detectedMudra">Ready to Start</div>
-                <div class="result-confidence" id="confidence">Show a mudra to begin detection</div>
-                <span class="result-method" id="detectionMethod">ONE HAND MODE</span>
-            </div>
-
-            <!-- Status Message -->
-            <div class="status-message status-info" id="statusMessage">
-                Click "Start Detection" to begin. Make sure your camera permission is enabled.
-            </div>
-        </div>
-
-        <!-- Sidebar -->
-        <div class="sidebar">
-            <!-- Statistics -->
-            <div class="info-card">
-                <h3>Session Stats</h3>
-                <div class="stats-grid">
-                    <div class="stat-item">
-                        <div class="stat-value" id="detectionCount">0</div>
-                        <div class="stat-label">Detections</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="uniqueMudras">0</div>
-                        <div class="stat-label">Unique</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">
-                            <span class="fps-indicator" id="fpsDisplay">0 FPS</span>
+    <section class="page-content section">
+        <div class="container">
+            <div class="detection-layout">
+                <div>
+                    <div class="video-container">
+                        <video id="webcam" autoplay playsinline></video>
+                        <canvas id="canvas"></canvas>
+                        <div class="video-placeholder" id="placeholder">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                                <circle cx="12" cy="13" r="4"/>
+                            </svg>
+                            <h3>Camera Ready</h3>
+                            <p>Click Start to begin detection</p>
                         </div>
-                        <div class="stat-label">Frame Rate</div>
+                        <div class="mudra-label" id="mudraName" style="display:none;">--</div>
                     </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="accuracy">0%</div>
-                        <div class="stat-label">Avg Conf.</div>
+                    <div class="controls">
+                        <button class="control-btn btn-start" id="startBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="5 3 19 12 5 21 5 3"/>
+                            </svg>
+                            Start
+                        </button>
+                        <button class="control-btn btn-stop" id="stopBtn" style="display:none;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="6" y="6" width="12" height="12"/>
+                            </svg>
+                            Stop
+                        </button>
+                        <button class="control-btn btn-reset" id="resetBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="1 4 1 10 7 10"/>
+                                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                            </svg>
+                            Reset
+                        </button>
                     </div>
                 </div>
-            </div>
-
-            <!-- Tips -->
-            <div class="info-card">
-                <h3>💡 Tips</h3>
-                <ul style="list-style: none; padding: 0; line-height: 1.8; color: var(--color-text-light); font-size: 0.9rem;">
-                    <li>✓ Ensure good lighting</li>
-                    <li>✓ Keep hand centered in frame</li>
-                    <li>✓ Hold mudra steady for 2-3 seconds</li>
-                    <li>✓ Try clear, distinct finger positions</li>
-                    <li>✓ Avoid cluttered background</li>
-                </ul>
-            </div>
-
-            <!-- Detected Mudras -->
-            <div class="info-card">
-                <h3>📚 Detected Mudras</h3>
-                <div class="mudra-preview">
-                    <div class="mudra-list" id="detectedMudrasList">
-                        <div style="text-align: center; color: var(--color-text-light); font-size: 0.9rem; padding: 1rem;">
-                            No mudras detected yet
+                <aside>
+                    <div class="sidebar-card">
+                        <h3>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                            Current Mudra
+                        </h3>
+                        <div class="current-mudra-display">
+                            <h4 id="currentName">--</h4>
+                            <p id="currentMeaning">Waiting for detection</p>
                         </div>
                     </div>
-                </div>
+                    <div class="sidebar-card">
+                        <h3>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="20" x2="18" y2="10"/>
+                                <line x1="12" y1="20" x2="12" y2="4"/>
+                                <line x1="6" y1="20" x2="6" y2="14"/>
+                            </svg>
+                            Session
+                        </h3>
+                        <div class="stats-grid">
+                            <div class="stat-box">
+                                <div class="stat-value" id="uniqueCount">0</div>
+                                <div class="stat-label">Mudras</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-value" id="duration">0:00</div>
+                                <div class="stat-label">Time</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="sidebar-card">
+                        <h3>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <polyline points="12 6 12 12 16 14"/>
+                            </svg>
+                            Detected Mudras
+                        </h3>
+                        <div class="history-list" id="historyList">
+                            <div class="empty-state">No mudras detected yet</div>
+                        </div>
+                    </div>
+                </aside>
             </div>
         </div>
-    </div>
+    </section>
 
-    <script src="../js/detection-engine.js"></script>
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-simple">
+                <a href="../index.html" class="footer-logo">
+                    <span>Mudra Academy</span>
+                </a>
+                <nav class="footer-nav">
+                    <a href="../index.html">Home</a>
+                    <a href="library.html">Library</a>
+                    <a href="detection-mode.html">Detection</a>
+                    <a href="../index.html#games">Games</a>
+                </nav>
+                <p class="footer-copy">&copy; 2025 Mudra Academy. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../js/main.js"></script>
+    <script>
+    (function() {
+        var API = 'http://localhost:5000';
+        var INTERVAL = 150;
+        var running = false;
+        var video, canvas, ctx, timer, sessionTimer, startTime;
+        var uniqueMap = {}, lastMudra = null, lastTime = 0;
+
+        var meanings = {
+            'Pataka': 'Flag - Beginning, clouds',
+            'Tripataka': 'Three-part flag - Crown',
+            'Ardhapataka': 'Half flag - Leaves',
+            'Kartarimukha': 'Scissors - Separation',
+            'Mayura': 'Peacock',
+            'Ardhachandra': 'Half moon',
+            'Arala': 'Bent',
+            'Shukatunda': 'Parrot beak',
+            'Musti': 'Fist',
+            'Shikhara': 'Peak',
+            'Kapittha': 'Elephant apple',
+            'Katakamukha': 'Bracelet opening',
+            'Suchi': 'Needle',
+            'Chandrakala': 'Moon digit',
+            'Padmakosha': 'Lotus bud',
+            'Sarpashirsha': 'Snake hood',
+            'Mrigashirsha': 'Deer head',
+            'Simhamukha': 'Lion face',
+            'Kangula': 'Bell',
+            'Alapadma': 'Bloomed lotus',
+            'Chatura': 'Square',
+            'Bhramara': 'Bee',
+            'Hamsasya': 'Swan beak',
+            'Hamsapaksha': 'Swan wing',
+            'Samdamsha': 'Pincers',
+            'Mukula': 'Bud'
+        };
+
+        var $ = function(id) { return document.getElementById(id); };
+
+        function checkAPI() {
+            fetch(API + '/health').catch(function() {});
+        }
+
+        function start() {
+            navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } })
+            .then(function(stream) {
+                video = $('webcam');
+                video.srcObject = stream;
+                canvas = $('canvas');
+                ctx = canvas.getContext('2d');
+                canvas.width = 480;
+                canvas.height = 360;
+                $('placeholder').style.display = 'none';
+                $('startBtn').style.display = 'none';
+                $('stopBtn').style.display = 'inline-flex';
+                $('mudraName').style.display = 'block';
+                running = true;
+                startTime = Date.now();
+                sessionTimer = setInterval(updateTime, 1000);
+                timer = setInterval(detect, INTERVAL);
+            }).catch(function() {});
+        }
+
+        function stop() {
+            running = false;
+            clearInterval(timer);
+            clearInterval(sessionTimer);
+            if (video && video.srcObject) {
+                video.srcObject.getTracks().forEach(function(t) { t.stop(); });
+            }
+            $('placeholder').style.display = 'flex';
+            $('startBtn').style.display = 'inline-flex';
+            $('stopBtn').style.display = 'none';
+            $('mudraName').style.display = 'none';
+        }
+
+        function detect() {
+            if (!running) return;
+            ctx.drawImage(video, 0, 0, 480, 360);
+            var data = canvas.toDataURL('image/jpeg', 0.65).split(',')[1];
+            fetch(API + '/detect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: data })
+            }).then(function(r) { return r.json(); })
+            .then(function(res) {
+                if (res.success && res.mudra && res.mudra !== 'Unknown') {
+                    show(res.mudra, res.confidence || 0);
+                } else {
+                    show('Unknown', 0);
+                }
+            }).catch(function() {});
+        }
+
+        function show(mudra, conf) {
+            $('mudraName').textContent = mudra;
+            $('currentName').textContent = mudra;
+            $('currentMeaning').textContent = meanings[mudra] || '';
+            var now = Date.now();
+            if (mudra !== 'Unknown' && conf >= 0.3 && (mudra !== lastMudra || now - lastTime > 500)) {
+                addHistory(mudra, conf);
+                lastMudra = mudra;
+                lastTime = now;
+            }
+        }
+
+        function addHistory(mudra, conf) {
+            if (!uniqueMap[mudra]) {
+                uniqueMap[mudra] = { mudra: mudra, conf: conf };
+                $('uniqueCount').textContent = Object.keys(uniqueMap).length;
+                renderHistory();
+            }
+        }
+
+        function renderHistory() {
+            var mudras = Object.values(uniqueMap);
+            if (!mudras.length) {
+                $('historyList').innerHTML = '<div class="empty-state">No mudras detected yet</div>';
+                return;
+            }
+            var html = '';
+            for (var i = 0; i < mudras.length; i++) {
+                var h = mudras[i];
+                html += '<div class="history-item">';
+                html += '<div class="history-abbr">' + h.mudra.substring(0, 2) + '</div>';
+                html += '<div class="history-info"><div class="history-name">' + h.mudra + '</div>';
+                html += '<div class="history-time">' + (meanings[h.mudra] || '') + '</div></div>';
+                html += '</div>';
+            }
+            $('historyList').innerHTML = html;
+        }
+
+        function updateTime() {
+            var s = Math.floor((Date.now() - startTime) / 1000);
+            var m = Math.floor(s / 60);
+            s = s % 60;
+            $('duration').textContent = m + ':' + (s < 10 ? '0' : '') + s;
+        }
+
+        function reset() {
+            stop();
+            uniqueMap = {};
+            lastMudra = null;
+            $('uniqueCount').textContent = '0';
+            $('duration').textContent = '0:00';
+            $('currentName').textContent = '--';
+            $('currentMeaning').textContent = 'Waiting for detection';
+            $('mudraName').textContent = '--';
+            renderHistory();
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAPI();
+            $('startBtn').addEventListener('click', start);
+            $('stopBtn').addEventListener('click', stop);
+            $('resetBtn').addEventListener('click', reset);
+        });
+    })();
+    </script>
 </body>
 </html>

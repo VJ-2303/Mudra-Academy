@@ -3,445 +3,151 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Select Detection Mode - Mudra Academy</title>
+    <meta name="description" content="Choose your mudra detection mode - practice with AI-powered real-time detection">
+    <title>Detection Mode - Mudra Academy</title>
     
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/pages.css">
     
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%238B2942' width='100' height='100' rx='20'/%3E%3Ctext x='50' y='65' font-size='50' text-anchor='middle' fill='%23D4A84B' font-family='serif'%3EM%3C/text%3E%3C/svg%3E">
+
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        :root {
-            --color-primary: #8B2942;
-            --color-secondary: #D4A84B;
-            --color-bg: #FFF8F0;
-            --color-white: #FFFFFF;
-            --color-text: #2C1810;
-            --color-text-light: #6B5544;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #FFF8F0 0%, #FFE8D6 100%);
-            color: var(--color-text);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* Navigation */
-        nav {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 1rem 2rem;
-            box-shadow: 0 2px 20px rgba(139, 41, 66, 0.1);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .nav-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: var(--color-primary);
-            text-decoration: none;
-        }
-
-        .nav-links a {
-            color: var(--color-text);
-            text-decoration: none;
-            margin-left: 2rem;
-            font-weight: 500;
-            transition: color 0.3s ease;
-        }
-
-        .nav-links a:hover {
-            color: var(--color-primary);
-        }
-
-        /* Main Content */
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 4rem 2rem;
-            flex: 1;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 4rem;
-        }
-
-        .header h1 {
-            font-family: 'Playfair Display', serif;
-            font-size: 3rem;
-            color: var(--color-primary);
-            margin-bottom: 1rem;
-        }
-
-        .header p {
-            font-size: 1.2rem;
-            color: var(--color-text-light);
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        /* Mode Cards */
         .mode-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin-bottom: 3rem;
+            gap: var(--spacing-xl);
+            max-width: 800px;
+            margin: 0 auto;
         }
-
         .mode-card {
-            background: var(--color-white);
-            border-radius: 20px;
-            padding: 3rem 2rem;
+            background: var(--color-light);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-xl);
             text-align: center;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
-            transition: all 0.3s ease;
+            border: 2px solid rgba(139, 41, 66, 0.1);
+            transition: all var(--transition-base);
             cursor: pointer;
-            position: relative;
+            text-decoration: none;
+            display: block;
             overflow: hidden;
-            border: 3px solid transparent;
         }
-
-        .mode-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
+        .mode-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--color-primary);
+            box-shadow: var(--shadow-lg);
+        }
+        .mode-image {
+            width: 100%;
+            height: 180px;
+            margin-bottom: var(--spacing-lg);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            background: var(--gradient-card);
+        }
+        .mode-image img {
             width: 100%;
             height: 100%;
-            background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            z-index: 0;
+            object-fit: cover;
+            transition: transform var(--transition-base);
         }
-
-        .mode-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 20px 60px rgba(139, 41, 66, 0.2);
-            border-color: var(--color-primary);
+        .mode-card:hover .mode-image img {
+            transform: scale(1.05);
         }
-
-        .mode-card:hover::before {
-            opacity: 0.05;
+        .mode-card h3 {
+            font-family: var(--font-heading);
+            font-size: 1.5rem;
+            color: var(--color-dark);
+            margin-bottom: var(--spacing-sm);
         }
-
-        .mode-card-content {
-            position: relative;
-            z-index: 1;
-        }
-
-        .mode-icon {
-            font-size: 4rem;
-            margin-bottom: 1.5rem;
-            display: block;
-        }
-
-        .mode-card h2 {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.8rem;
-            color: var(--color-primary);
-            margin-bottom: 1rem;
-        }
-
         .mode-card p {
-            color: var(--color-text-light);
+            color: var(--color-gray);
+            font-size: 0.95rem;
             line-height: 1.6;
-            margin-bottom: 1.5rem;
         }
-
-        .status-badge {
+        .mode-badge {
             display: inline-block;
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-size: 0.9rem;
+            padding: var(--spacing-xs) var(--spacing-md);
+            background: rgba(212, 168, 75, 0.15);
+            color: var(--color-secondary-dark);
+            border-radius: var(--radius-full);
+            font-size: 0.75rem;
             font-weight: 600;
-            margin-top: 1rem;
-        }
-
-        .available {
-            background: rgba(34, 197, 94, 0.1);
-            color: #16a34a;
-        }
-
-        .coming-soon {
-            background: rgba(234, 179, 8, 0.1);
-            color: #ca8a04;
-        }
-
-        .mode-card.disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .mode-card.disabled:hover {
-            transform: none;
-            border-color: transparent;
-        }
-
-        .start-btn {
-            display: inline-block;
-            padding: 1rem 2.5rem;
-            background: var(--color-primary);
-            color: var(--color-white);
-            text-decoration: none;
-            border-radius: 50px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(139, 41, 66, 0.3);
-            border: none;
-            cursor: pointer;
-            font-size: 1rem;
-        }
-
-        .start-btn:hover {
-            background: #6d1f34;
-            box-shadow: 0 6px 25px rgba(139, 41, 66, 0.4);
-            transform: translateY(-2px);
-        }
-
-        .start-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        /* Info Section */
-        .info-section {
-            background: var(--color-white);
-            border-radius: 20px;
-            padding: 2rem;
-            margin-top: 3rem;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
-        }
-
-        .info-section h3 {
-            font-family: 'Playfair Display', serif;
-            color: var(--color-primary);
-            margin-bottom: 1rem;
-        }
-
-        .info-section ul {
-            list-style: none;
-            padding: 0;
-        }
-
-        .info-section li {
-            padding: 0.5rem 0;
-            padding-left: 1.5rem;
-            position: relative;
-            color: var(--color-text-light);
-        }
-
-        .info-section li::before {
-            content: '✓';
-            position: absolute;
-            left: 0;
-            color: var(--color-secondary);
-            font-weight: bold;
-        }
-
-        /* Server Status */
-        .server-status {
-            text-align: center;
-            margin: 2rem 0;
-            padding: 1rem;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.5);
-        }
-
-        .server-status.checking {
-            color: var(--color-text-light);
-        }
-
-        .server-status.online {
-            background: rgba(34, 197, 94, 0.1);
-            color: #16a34a;
-        }
-
-        .server-status.offline {
-            background: rgba(239, 68, 68, 0.1);
-            color: #dc2626;
-        }
-
-        .status-dot {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            margin-right: 0.5rem;
-            animation: pulse 2s infinite;
-        }
-
-        .online .status-dot {
-            background: #16a34a;
-        }
-
-        .offline .status-dot {
-            background: #dc2626;
-        }
-
-        @keyframes pulse {
-            0%, 100% {
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.5;
-            }
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .header h1 {
-                font-size: 2.5rem;
-            }
-
-            .header p {
-                font-size: 1rem;
-            }
-
-            .mode-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .nav-links {
-                display: none;
-            }
+            margin-top: var(--spacing-md);
         }
     </style>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav>
-        <div class="nav-container">
-            <a href="../index.html" class="logo">Mudra Academy</a>
-            <div class="nav-links">
-                <a href="../index.html">Home</a>
-                <a href="library.html">Library</a>
-                <a href="games/quiz.html">Games</a>
+    <nav class="navbar scrolled">
+        <div class="container">
+            <a href="../index.html" class="logo">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+                        <path d="M12 6v6l4 2"/>
+                    </svg>
+                </div>
+                <span class="logo-text">Mudra Academy</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="../index.html#features">Features</a></li>
+                <li><a href="../index.html#games">Games</a></li>
+                <li><a href="detection-mode.html" class="active">Live Detection</a></li>
+                <li><a href="library.html">Library</a></li>
+            </ul>
+            <div class="nav-cta">
+                <a href="learn.html" class="btn btn-primary">Start Learning</a>
             </div>
+            <button class="mobile-menu-btn" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <div class="container">
-        <div class="header">
-            <h1>Choose Detection Mode</h1>
-            <p>Select your preferred hand detection mode to start learning Bharatanatyam mudras with AI-powered real-time feedback</p>
-        </div>
-
-        <!-- Server Status -->
-        <div class="server-status checking" id="serverStatus">
-            <span class="status-dot"></span>
-            <span id="statusText">Checking server connection...</span>
-        </div>
-
-        <!-- Mode Selection Cards -->
-        <div class="mode-grid">
-            <!-- One Hand Detection -->
-            <div class="mode-card" id="oneHandCard" onclick="selectMode('one-hand')">
-                <div class="mode-card-content">
-                    <span class="mode-icon">🖐️</span>
-                    <h2>One Hand Detection</h2>
-                    <p>Perfect for learning individual Asamyukta Hasta mudras. Our AI model will detect and guide you through single-hand gestures with real-time feedback.</p>
-                    <button class="start-btn" id="oneHandBtn">Start Learning</button>
-                    <span class="status-badge available">✓ Available</span>
-                </div>
-            </div>
-
-            <!-- Two Hand Detection -->
-            <div class="mode-card disabled" id="twoHandCard">
-                <div class="mode-card-content">
-                    <span class="mode-icon">🙌</span>
-                    <h2>Two Hand Detection</h2>
-                    <p>Master complex Samyukta Hasta mudras using both hands. Advanced detection for combined hand gestures and symmetrical movements.</p>
-                    <button class="start-btn" disabled>Start Learning</button>
-                    <span class="status-badge coming-soon">Coming Soon</span>
-                </div>
+    <section class="page-content section">
+        <div class="container">
+            <div class="mode-grid">
+                <a href="live-detection.html?mode=single" class="mode-card">
+                    <div class="mode-image">
+                        <img src="../assets/images/Mudras/Pataka.jpg" alt="Single Hand Mudra Example">
+                    </div>
+                    <h3>Single Hand Mudras</h3>
+                    <p>Practice single-hand mudras with real-time AI detection</p>
+                    <span class="mode-badge">28 Mudras</span>
+                </a>
+                <a href="live-detection.html?mode=double" class="mode-card">
+                    <div class="mode-image">
+                        <img src="../assets/images/Mudras/Kartarisvastika.jpg" alt="Double Hand Mudra Example">
+                    </div>
+                    <h3>Double Hand Mudras</h3>
+                    <p>Practice double-hand mudras with combined gestures</p>
+                    <span class="mode-badge">Coming Soon</span>
+                </a>
             </div>
         </div>
+    </section>
 
-        <!-- Information Section -->
-        <div class="info-section">
-            <h3>What You'll Learn</h3>
-            <ul>
-                <li>Real-time mudra detection and correction</li>
-                <li>Instant feedback on hand positioning</li>
-                <li>Confidence scoring for accurate gestures</li>
-                <li>Visual guides and mudra reference library</li>
-                <li>Progress tracking and performance analytics</li>
-            </ul>
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-simple">
+                <a href="../index.html" class="footer-logo">
+                    <span>Mudra Academy</span>
+                </a>
+                <nav class="footer-nav">
+                    <a href="../index.html">Home</a>
+                    <a href="library.html">Library</a>
+                    <a href="detection-mode.html">Detection</a>
+                    <a href="../index.html#games">Games</a>
+                </nav>
+                <p class="footer-copy">&copy; 2025 Mudra Academy. All rights reserved.</p>
+            </div>
         </div>
-    </div>
+    </footer>
 
-    <script>
-        const API_URL = 'http://localhost:5000';
-        let serverOnline = false;
-
-        // Check server status on page load
-        async function checkServerStatus() {
-            const statusDiv = document.getElementById('serverStatus');
-            const statusText = document.getElementById('statusText');
-            const oneHandBtn = document.getElementById('oneHandBtn');
-
-            try {
-                const response = await fetch(`${API_URL}/health`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    serverOnline = true;
-                    statusDiv.className = 'server-status online';
-                    statusText.textContent = `AI Server Online • ${data.mudra_count} mudras loaded`;
-                    oneHandBtn.disabled = false;
-                } else {
-                    throw new Error('Server not responding');
-                }
-            } catch (error) {
-                serverOnline = false;
-                statusDiv.className = 'server-status offline';
-                statusText.innerHTML = '⚠️ AI Server Offline - Please start the server first<br><small>Run: cd ml && source .venv/bin/activate && python api_server.py</small>';
-                oneHandBtn.disabled = true;
-            }
-        }
-
-        function selectMode(mode) {
-            if (mode === 'one-hand' && serverOnline) {
-                // Navigate to live detection page
-                window.location.href = 'live-detection.html';
-            } else if (mode === 'two-hand') {
-                alert('Two-hand detection is coming soon! Stay tuned for updates.');
-            }
-        }
-
-        // Check server status on page load
-        checkServerStatus();
-
-        // Recheck every 5 seconds
-        setInterval(checkServerStatus, 5000);
-    </script>
+    <script src="../js/main.js"></script>
 </body>
 </html>

@@ -18,15 +18,44 @@ function initNavbar() {
     
     if (!navbar) return;
     
+    // Check if navbar should always be solid (has scrolled class in HTML)
+    const alwaysSolid = navbar.classList.contains('scrolled');
+    
+    let lastScrollY = window.scrollY;
+    let ticking = false;
+    
     function handleScroll() {
-        if (window.scrollY > 50) {
-            navbar.classList.add('scrolled');
-        } else {
-            navbar.classList.remove('scrolled');
+        const currentScrollY = window.scrollY;
+        
+        // Add/remove scrolled class for background (only if not always solid)
+        if (!alwaysSolid) {
+            if (currentScrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
         }
+        
+        // Hide/show navbar based on scroll direction
+        if (currentScrollY > lastScrollY && currentScrollY > 100) {
+            // Scrolling down & past threshold - hide navbar
+            navbar.classList.add('hidden');
+        } else {
+            // Scrolling up - show navbar
+            navbar.classList.remove('hidden');
+        }
+        
+        lastScrollY = currentScrollY;
+        ticking = false;
     }
     
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', function() {
+        if (!ticking) {
+            window.requestAnimationFrame(handleScroll);
+            ticking = true;
+        }
+    });
+    
     handleScroll(); // Check initial state
 }
 

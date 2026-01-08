@@ -23,14 +23,6 @@ ML_DIR="$PROJECT_ROOT/ml"
 PID_FILE_API="$PROJECT_ROOT/.api_server.pid"
 PID_FILE_FRONTEND="$PROJECT_ROOT/.frontend_server.pid"
 
-print_header() {
-    echo ""
-    echo -e "${MAGENTA}═══════════════════════════════════════════════════════════════${NC}"
-    echo -e "${CYAN}           🎭 MUDRA ACADEMY - STARTUP SCRIPT 🎭${NC}"
-    echo -e "${MAGENTA}═══════════════════════════════════════════════════════════════${NC}"
-    echo ""
-}
-
 print_success() { echo -e "${GREEN}✓${NC} $1"; }
 print_error() { echo -e "${RED}✗${NC} $1"; }
 print_info() { echo -e "${BLUE}ℹ${NC} $1"; }
@@ -141,7 +133,6 @@ start_frontend_server() {
 }
 
 main() {
-    print_header
     
     if [ "$1" = "--stop" ] || [ "$1" = "stop" ]; then
         stop_servers
@@ -164,9 +155,7 @@ main() {
     start_frontend_server
     
     echo ""
-    echo -e "${MAGENTA}═══════════════════════════════════════════════════════════════${NC}"
-    echo -e "${GREEN}                    🎉 SERVERS STARTED! 🎉${NC}"
-    echo -e "${MAGENTA}═══════════════════════════════════════════════════════════════${NC}"
+    echo -e "${GREEN}                    SERVERS STARTED! ${NC}"
     echo ""
     echo -e "${CYAN}📡 API Server:${NC}      http://localhost:$API_PORT"
     echo -e "${CYAN}🌐 Frontend:${NC}        http://localhost:$FRONTEND_PORT"

@@ -17,7 +17,7 @@
     <style>
         /* Flashcard Page Styles */
         .flashcard-container {
-            padding: 2rem 0 4rem;
+            padding: calc(80px + 2rem) 0 4rem;
             min-height: calc(100vh - 80px);
         }
 
@@ -911,23 +911,6 @@
         </div>
     </nav>
 
-    <!-- Page Header -->
-    <section class="page-header">
-        <div class="container">
-            <div class="page-header-content">
-                <nav class="breadcrumb">
-                    <a href="../../index.html">Home</a>
-                    <span>/</span>
-                    <a href="../../index.html#games">Games</a>
-                    <span>/</span>
-                    <span>Flashcards</span>
-                </nav>
-                <h1>Mudra Flashcards</h1>
-                <p>Identify mudras from images and master your recognition skills</p>
-            </div>
-        </div>
-    </section>
-
     <!-- Flashcard Container -->
     <section class="flashcard-container">
         <div class="container">
@@ -1130,11 +1113,19 @@
         </div>
     </section>
 
-    <!-- Footer -->
     <footer class="footer">
         <div class="container">
-            <div class="footer-bottom" style="border-top: none; padding-top: 0;">
-                <p>2025 Mudra Academy. All rights reserved.</p>
+            <div class="footer-simple">
+                <a href="../../index.html" class="footer-logo">
+                    <span>Mudra Academy</span>
+                </a>
+                <nav class="footer-nav">
+                    <a href="../../index.html">Home</a>
+                    <a href="../library.html">Library</a>
+                    <a href="../detection-mode.html">Detection</a>
+                    <a href="../../index.html#games">Games</a>
+                </nav>
+                <p class="footer-copy">&copy; 2025 Mudra Academy. All rights reserved.</p>
             </div>
         </div>
     </footer>
@@ -1356,6 +1347,11 @@
 
             // Show next button
             document.getElementById('nextSection').classList.add('show');
+            
+            // Auto-scroll to show feedback section
+            setTimeout(() => {
+                feedbackSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
         }
 
         // Next Card

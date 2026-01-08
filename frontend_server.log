@@ -1,9 +1,0 @@
-127.0.0.1 - - [08/Jan/2026 23:07:10] "GET / HTTP/1.1" 200 -
-127.0.0.1 - - [08/Jan/2026 23:07:10] "GET /css/styles.css HTTP/1.1" 200 -
-127.0.0.1 - - [08/Jan/2026 23:07:10] "GET /js/main.js HTTP/1.1" 200 -
-127.0.0.1 - - [08/Jan/2026 23:07:13] "GET /pages/detection-mode.html HTTP/1.1" 200 -
-127.0.0.1 - - [08/Jan/2026 23:07:14] code 404, message File not found
-127.0.0.1 - - [08/Jan/2026 23:07:14] "GET /favicon.ico HTTP/1.1" 404 -
-127.0.0.1 - - [08/Jan/2026 23:07:22] "GET /index.html HTTP/1.1" 200 -
-127.0.0.1 - - [08/Jan/2026 23:07:25] "GET /pages/live-detection.html HTTP/1.1" 200 -
-127.0.0.1 - - [08/Jan/2026 23:07:25] "GET /js/detection-engine.js HTTP/1.1" 200 -

@@ -83,6 +83,7 @@ html {
     scroll-behavior: smooth;
     font-size: 16px;
     -webkit-text-size-adjust: 100%;
+    height: 100%;
 }
 
 body {
@@ -94,6 +95,14 @@ body {
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Main content area should grow to push footer down */
+main, .page-content, .library-controls + .library-content {
+    flex: 1;
 }
 
 /* Improve tap targets for touch devices */
@@ -256,13 +265,18 @@ p {
     right: 0;
     z-index: 1000;
     padding: var(--spacing-md) 0;
-    transition: all var(--transition-base);
+    transition: all var(--transition-base), transform 0.3s ease;
 }
 
-.navbar.scrolled {
+.navbar.scrolled,
+.navbar.solid {
     background: rgba(26, 26, 46, 0.95);
     backdrop-filter: blur(10px);
     box-shadow: var(--shadow-lg);
+}
+
+.navbar.hidden {
+    transform: translateY(-100%);
 }
 
 .navbar .container {
@@ -1011,6 +1025,50 @@ p {
 
 .footer-bottom a:hover {
     color: var(--color-secondary);
+}
+
+/* Simple Footer for Internal Pages */
+.footer-simple {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-lg) 0;
+    text-align: center;
+}
+
+.footer-logo {
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--color-secondary);
+}
+
+.footer-logo:hover {
+    color: var(--color-secondary-light);
+}
+
+.footer-nav {
+    display: flex;
+    gap: var(--spacing-lg);
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.footer-nav a {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+    transition: color var(--transition-base);
+}
+
+.footer-nav a:hover {
+    color: var(--color-secondary);
+}
+
+.footer-copy {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.85rem;
+    margin: 0;
 }
 
 /* ========== Responsive Design ========== */
