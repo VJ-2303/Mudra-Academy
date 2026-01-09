@@ -203,6 +203,26 @@
     gap: var(--spacing-xl);
 }
 
+/* Section Divider */
+.section-divider {
+    text-align: center;
+    padding: var(--spacing-3xl) 0 var(--spacing-2xl);
+    margin-top: var(--spacing-2xl);
+    border-top: 2px solid rgba(139, 41, 66, 0.1);
+}
+
+.section-divider h2 {
+    font-family: var(--font-heading);
+    font-size: 2rem;
+    color: var(--color-primary);
+    margin-bottom: var(--spacing-sm);
+}
+
+.section-divider p {
+    color: var(--color-gray);
+    font-size: 1.1rem;
+}
+
 /* Mudra Card */
 .mudra-card {
     background: var(--color-light);
