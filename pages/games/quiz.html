@@ -5,15 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Test your theoretical knowledge of Bharatanatyam mudras with our interactive quiz challenge">
     <title>Mudra Quiz Challenge - Mudra Academy</title>
-    
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../../css/styles.css">
     <link rel="stylesheet" href="../../css/pages.css">
-    
+
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%238B2942' width='100' height='100' rx='20'/%3E%3Ctext x='50' y='65' font-size='50' text-anchor='middle' fill='%23D4A84B' font-family='serif'%3EM%3C/text%3E%3C/svg%3E">
-    
+
     <style>
         /* Quiz Page Specific Styles */
         .quiz-container {
@@ -786,18 +786,17 @@
                 </div>
                 <span class="logo-text">Mudra Academy</span>
             </a>
-            
+
             <ul class="nav-links">
                 <li><a href="../../index.html#features">Features</a></li>
                 <li><a href="../../index.html#games">Games</a></li>
-                <li><a href="../../index.html#webcam">Live Detection</a></li>
                 <li><a href="../library.html">Library</a></li>
             </ul>
-            
+
             <div class="nav-cta">
-                <a href="../learn.html" class="btn btn-primary">Start Learning</a>
+                <a href="../detection-mode.html" class="btn btn-primary">Live Detection</a>
             </div>
-            
+
             <button class="mobile-menu-btn" aria-label="Toggle menu">
                 <span></span>
                 <span></span>
@@ -820,7 +819,7 @@
                 </div>
                 <h1>Ready to Test Your Knowledge?</h1>
                 <p>Challenge yourself with 10 randomly selected questions about Bharatanatyam mudras. Learn the meanings, techniques, and symbolism behind each gesture.</p>
-                
+
                 <div class="quiz-info-cards">
                     <div class="quiz-info-card">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -892,7 +891,7 @@
                         <span>Question <span id="questionNum">1</span></span>
                     </div>
                     <h2 class="question-text" id="questionText">Loading question...</h2>
-                    
+
                     <div class="quiz-options" id="optionsContainer">
                         <!-- Options will be dynamically inserted -->
                     </div>
@@ -1370,7 +1369,7 @@
         function startQuiz() {
             // Enter fullscreen for immersive experience
             enterFullscreen();
-            
+
             // Select 10 random questions
             selectedQuestions = shuffleArray(allQuestions).slice(0, 10);
             currentQuestionIndex = 0;
@@ -1384,7 +1383,7 @@
 
             // Reset UI
             document.getElementById('currentScore').textContent = '0';
-            
+
             // Load first question
             loadQuestion();
         }
@@ -1393,7 +1392,7 @@
         function loadQuestion() {
             answered = false;
             const question = selectedQuestions[currentQuestionIndex];
-            
+
             // Update progress
             document.getElementById('currentQuestion').textContent = currentQuestionIndex + 1;
             document.getElementById('questionNum').textContent = currentQuestionIndex + 1;
@@ -1405,7 +1404,7 @@
             // Generate options
             const optionsContainer = document.getElementById('optionsContainer');
             optionsContainer.innerHTML = '';
-            
+
             const letters = ['A', 'B', 'C', 'D'];
             question.options.forEach((option, index) => {
                 const optionEl = document.createElement('div');
@@ -1458,7 +1457,7 @@
 
             const question = selectedQuestions[currentQuestionIndex];
             const options = document.querySelectorAll('.quiz-option');
-            
+
             // Disable all options
             options.forEach(opt => opt.classList.add('disabled'));
 
@@ -1487,7 +1486,7 @@
         // Next Question
         function nextQuestion() {
             currentQuestionIndex++;
-            
+
             if (currentQuestionIndex >= 10) {
                 showResults();
             } else {
@@ -1499,7 +1498,7 @@
         function showResults() {
             // Exit fullscreen when game ends
             exitFullscreen();
-            
+
             document.getElementById('gameArea').classList.remove('active');
             document.getElementById('resultsScreen').classList.add('active');
 
@@ -1556,7 +1555,7 @@
         function restartQuiz() {
             // Reset score circle animation
             document.getElementById('scoreCircle').style.strokeDashoffset = 283;
-            
+
             // Small delay to allow CSS transition reset
             setTimeout(() => {
                 startQuiz();
@@ -1567,7 +1566,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
             const navLinks = document.querySelector('.nav-links');
-            
+
             if (mobileMenuBtn && navLinks) {
                 mobileMenuBtn.addEventListener('click', function() {
                     navLinks.classList.toggle('active');

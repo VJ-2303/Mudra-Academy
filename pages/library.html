@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Explore our comprehensive library of 28 Asamyukta Hasta (single-hand) Bharatanatyam mudras with meanings, usage, and how to perform each gesture.">
     <title>Mudra Library - Mudra Academy</title>
-    
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../css/styles.css">
     <link rel="stylesheet" href="../css/pages.css">
-    
+
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%238B2942' width='100' height='100' rx='20'/%3E%3Ctext x='50' y='65' font-size='50' text-anchor='middle' fill='%23D4A84B' font-family='serif'%3EM%3C/text%3E%3C/svg%3E">
 </head>
 <body>
@@ -27,18 +27,17 @@
                 </div>
                 <span class="logo-text">Mudra Academy</span>
             </a>
-            
+
             <ul class="nav-links">
                 <li><a href="../index.html#features">Features</a></li>
                 <li><a href="../index.html#games">Games</a></li>
-                <li><a href="../index.html#webcam">Live Detection</a></li>
                 <li><a href="library.html" class="active">Library</a></li>
             </ul>
-            
+
             <div class="nav-cta">
-                <a href="learn.html" class="btn btn-primary">Start Learning</a>
+                <a href="detection-mode.html" class="btn btn-primary">live Detection</a>
             </div>
-            
+
             <button class="mobile-menu-btn" aria-label="Toggle menu">
                 <span></span>
                 <span></span>
@@ -73,7 +72,7 @@
     <section class="library-content section">
         <div class="container">
             <div class="mudra-grid" id="mudraGrid">
-                
+
                 <!-- 1. Pataka -->
                 <article class="mudra-card" data-mudra="pataka" data-keywords="flag beginning dance invocation forest river breeze sky clouds command blessing">
                     <div class="mudra-card-image">
@@ -1252,10 +1251,10 @@
                     const mudraName = card.dataset.mudra;
                     const keywords = card.dataset.keywords;
                     const cardText = card.textContent.toLowerCase();
-                    
-                    const matches = !query || 
-                        mudraName.includes(query) || 
-                        keywords.includes(query) || 
+
+                    const matches = !query ||
+                        mudraName.includes(query) ||
+                        keywords.includes(query) ||
                         cardText.includes(query);
 
                     if (matches) {
@@ -1296,7 +1295,7 @@
 
             searchInput.value = '';
             clearBtn.style.display = 'none';
-            
+
             mudraCards.forEach(card => {
                 card.style.display = '';
                 card.classList.remove('hidden');
@@ -1312,7 +1311,7 @@
 
         function initBackToTop() {
             const backToTop = document.getElementById('backToTop');
-            
+
             if (!backToTop) return;
 
             window.addEventListener('scroll', function() {

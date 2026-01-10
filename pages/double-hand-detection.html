@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Practice double-hand Bharatanatyam mudras with real-time AI detection">
+    <title>Double Hand Detection - Mudra Academy</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/pages.css">
+
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%238B2942' width='100' height='100' rx='20'/%3E%3Ctext x='50' y='65' font-size='50' text-anchor='middle' fill='%23D4A84B' font-family='serif'%3EM%3C/text%3E%3C/svg%3E">
+
+    <style>
+        .detection-layout {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: var(--spacing-xl);
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .video-container {
+            background: var(--color-dark);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            position: relative;
+            aspect-ratio: 4/3;
+        }
+        #webcam {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+        #canvas { display: none; }
+        .video-placeholder {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: var(--color-dark);
+            color: var(--color-light);
+        }
+        .video-placeholder svg {
+            width: 64px;
+            height: 64px;
+            color: var(--color-secondary);
+            margin-bottom: var(--spacing-lg);
+        }
+        .video-placeholder h3 {
+            font-family: var(--font-heading);
+            margin-bottom: var(--spacing-sm);
+        }
+        .video-placeholder p {
+            color: var(--color-gray);
+        }
+        .mudra-label {
+            position: absolute;
+            bottom: var(--spacing-md);
+            left: var(--spacing-md);
+            font-family: var(--font-heading);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--color-light);
+            text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+        }
+        .mode-badge {
+            position: absolute;
+            top: var(--spacing-md);
+            left: var(--spacing-md);
+            background: var(--color-secondary);
+            color: var(--color-dark);
+            padding: var(--spacing-xs) var(--spacing-md);
+            border-radius: var(--radius-full);
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .controls {
+            display: flex;
+            gap: var(--spacing-md);
+            justify-content: center;
+            margin-top: var(--spacing-lg);
+        }
+        .control-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-md) var(--spacing-xl);
+            border: none;
+            border-radius: var(--radius-full);
+            font-family: var(--font-body);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-base);
+        }
+        .control-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+        .btn-start {
+            background: var(--color-primary);
+            color: var(--color-light);
+        }
+        .btn-start:hover {
+            background: var(--color-primary-dark);
+            box-shadow: var(--shadow-primary);
+        }
+        .btn-stop {
+            background: #ef4444;
+            color: var(--color-light);
+        }
+        .btn-stop:hover { background: #dc2626; }
+        .btn-reset {
+            background: var(--color-light);
+            color: var(--color-dark);
+            border: 2px solid var(--color-gray-light);
+        }
+        .btn-reset:hover {
+            border-color: var(--color-primary);
+            color: var(--color-primary);
+        }
+        .sidebar-card {
+            background: var(--color-light);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            border: 1px solid rgba(139, 41, 66, 0.1);
+        }
+        .sidebar-card + .sidebar-card {
+            margin-top: var(--spacing-lg);
+        }
+        .sidebar-card h3 {
+            font-family: var(--font-heading);
+            font-size: 1.1rem;
+            color: var(--color-primary);
+            margin-bottom: var(--spacing-md);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        .sidebar-card h3 svg {
+            width: 18px;
+            height: 18px;
+            color: var(--color-secondary);
+        }
+        .current-mudra-display {
+            text-align: center;
+            padding: var(--spacing-md) 0;
+        }
+        .current-mudra-display h4 {
+            font-family: var(--font-heading);
+            font-size: 1.25rem;
+            color: var(--color-dark);
+            margin-bottom: var(--spacing-xs);
+        }
+        .current-mudra-display p {
+            color: var(--color-gray);
+            font-size: 0.9rem;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-md);
+        }
+        .stat-box {
+            text-align: center;
+            padding: var(--spacing-md);
+            background: var(--color-light-warm);
+            border-radius: var(--radius-md);
+        }
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--color-primary);
+        }
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--color-gray);
+            margin-top: var(--spacing-xs);
+        }
+        .history-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm) 0;
+            border-bottom: 1px solid var(--color-gray-light);
+        }
+        .history-item:last-child { border-bottom: none; }
+        .history-abbr {
+            width: 32px;
+            height: 32px;
+            background: var(--gradient-card);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.75rem;
+            color: var(--color-primary);
+        }
+        .history-info { flex: 1; }
+        .history-name { font-weight: 500; font-size: 0.9rem; }
+        .history-time { font-size: 0.75rem; color: var(--color-gray); }
+        .history-conf { font-size: 0.85rem; font-weight: 600; color: var(--color-secondary); }
+        .empty-state {
+            text-align: center;
+            color: var(--color-gray);
+            padding: var(--spacing-lg) 0;
+            font-size: 0.9rem;
+        }
+        .supported-mudras {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-xs);
+            margin-top: var(--spacing-sm);
+        }
+        .mudra-tag {
+            background: var(--color-light-warm);
+            color: var(--color-primary);
+            padding: var(--spacing-xs) var(--spacing-sm);
+            border-radius: var(--radius-sm);
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        @media (max-width: 900px) {
+            .detection-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar scrolled">
+        <div class="container">
+            <a href="../index.html" class="logo">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+                        <path d="M12 6v6l4 2"/>
+                    </svg>
+                </div>
+                <span class="logo-text">Mudra Academy</span>
+            </a>
+
+            <ul class="nav-links">
+                <li><a href="../index.html#features">Features</a></li>
+                <li><a href="../index.html#games">Games</a></li>
+                <li><a href="library.html" class="active">Library</a></li>
+            </ul>
+
+            <div class="nav-cta">
+                <a href="detection-mode.html" class="btn btn-primary">live Detection</a>
+            </div>
+
+            <button class="mobile-menu-btn" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </nav>
+
+    <section class="page-content section">
+        <div class="container">
+            <div class="detection-layout">
+                <div>
+                    <div class="video-container">
+                        <video id="webcam" autoplay playsinline></video>
+                        <canvas id="canvas"></canvas>
+                        <div class="video-placeholder" id="placeholder">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                                <circle cx="12" cy="13" r="4"/>
+                            </svg>
+                            <h3>Camera Ready</h3>
+                            <p>Click Start to begin double-hand detection</p>
+                        </div>
+                        <div class="mode-badge">Double Hand Mode</div>
+                        <div class="mudra-label" id="mudraName" style="display:none;">--</div>
+                    </div>
+                    <div class="controls">
+                        <button class="control-btn btn-start" id="startBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="5 3 19 12 5 21 5 3"/>
+                            </svg>
+                            Start
+                        </button>
+                        <button class="control-btn btn-stop" id="stopBtn" style="display:none;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="6" y="6" width="12" height="12"/>
+                            </svg>
+                            Stop
+                        </button>
+                        <button class="control-btn btn-reset" id="resetBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="1 4 1 10 7 10"/>
+                                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                            </svg>
+                            Reset
+                        </button>
+                    </div>
+                </div>
+                <aside>
+                    <div class="sidebar-card">
+                        <h3>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <circle cx="12" cy="12" r="3"/>
+                            </svg>
+                            Current Mudra
+                        </h3>
+                        <div class="current-mudra-display">
+                            <h4 id="currentName">--</h4>
+                            <p id="currentMeaning">Waiting for detection</p>
+                        </div>
+                    </div>
+                    <div class="sidebar-card">
+                        <h3>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="20" x2="18" y2="10"/>
+                                <line x1="12" y1="20" x2="12" y2="4"/>
+                                <line x1="6" y1="20" x2="6" y2="14"/>
+                            </svg>
+                            Session
+                        </h3>
+                        <div class="stats-grid">
+                            <div class="stat-box">
+                                <div class="stat-value" id="uniqueCount">0</div>
+                                <div class="stat-label">Mudras</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-value" id="duration">0:00</div>
+                                <div class="stat-label">Time</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="sidebar-card">
+                        <h3>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <polyline points="12 6 12 12 16 14"/>
+                            </svg>
+                            Detected Mudras
+                        </h3>
+                        <div class="history-list" id="historyList">
+                            <div class="empty-state">No mudras detected yet</div>
+                        </div>
+                    </div>
+                    <div class="sidebar-card">
+                        <h3>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                <line x1="16" y1="17" x2="8" y2="17"/>
+                            </svg>
+                            Supported Mudras
+                        </h3>
+                        <div class="supported-mudras">
+                            <span class="mudra-tag">Chakra</span>
+                            <span class="mudra-tag">Karkota</span>
+                            <span class="mudra-tag">Katariswastika</span>
+                            <span class="mudra-tag">Nagabandha</span>
+                            <span class="mudra-tag">Pasha</span>
+                            <span class="mudra-tag">Shanka</span>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-simple">
+                <a href="../index.html" class="footer-logo">
+                    <span>Mudra Academy</span>
+                </a>
+                <nav class="footer-nav">
+                    <a href="../index.html">Home</a>
+                    <a href="library.html">Library</a>
+                    <a href="detection-mode.html">Detection</a>
+                    <a href="../index.html#games">Games</a>
+                </nav>
+                <p class="footer-copy">&copy; 2025 Mudra Academy. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../js/main.js"></script>
+    <script>
+    (function() {
+        var API = 'http://localhost:5000';
+        var INTERVAL = 200;
+        var running = false;
+        var video, canvas, ctx, timer, sessionTimer, startTime;
+        var uniqueMap = {}, lastMudra = null, lastTime = 0;
+
+        // Double-hand mudra meanings (matching trained model class names)
+        var meanings = {
+            'Chakra': 'Disc/Wheel - Vishnu\'s divine weapon',
+            'Karkota': 'Crab - Interlocked fingers showing strength',
+            'Katariswastika': 'Scissor cross - Separation, difference',
+            'Nagabandha': 'Serpent bond - Intertwined snakes',
+            'Pasha': 'Noose - Rope or binding',
+            'Shanka': 'Conch shell - Sacred symbol'
+        };
+
+        var $ = function(id) { return document.getElementById(id); };
+
+        function checkAPI() {
+            fetch(API + '/health').then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data.double_hand_model) {
+                    console.warn('Double-hand model not loaded on server');
+                }
+            }).catch(function() {
+                console.error('API server not available');
+            });
+        }
+
+        function start() {
+            navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } })
+            .then(function(stream) {
+                video = $('webcam');
+                video.srcObject = stream;
+                canvas = $('canvas');
+                ctx = canvas.getContext('2d');
+                canvas.width = 640;
+                canvas.height = 480;
+
+                $('placeholder').style.display = 'none';
+                $('startBtn').style.display = 'none';
+                $('stopBtn').style.display = 'inline-flex';
+                $('mudraName').style.display = 'block';
+                running = true;
+                startTime = Date.now();
+                sessionTimer = setInterval(updateTime, 1000);
+                timer = setInterval(detect, INTERVAL);
+            }).catch(function(err) {
+                console.error('Camera error:', err);
+                alert('Could not access camera. Please allow camera permissions.');
+            });
+        }
+
+        function stop() {
+            running = false;
+            clearInterval(timer);
+            clearInterval(sessionTimer);
+            if (video && video.srcObject) {
+                video.srcObject.getTracks().forEach(function(t) { t.stop(); });
+            }
+            $('placeholder').style.display = 'flex';
+            $('startBtn').style.display = 'inline-flex';
+            $('stopBtn').style.display = 'none';
+            $('mudraName').style.display = 'none';
+        }
+
+        function detect() {
+            if (!running) return;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            var data = canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
+
+            fetch(API + '/detect-double', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: data })
+            }).then(function(r) { return r.json(); })
+            .then(function(res) {
+                if (res.success && res.mudra && res.mudra !== 'Unknown') {
+                    show(res.mudra, res.confidence || 0, res.meaning || '');
+                } else {
+                    show('Unknown', 0, '');
+                }
+            }).catch(function(err) {
+                console.error('Detection error:', err);
+            });
+        }
+
+        function show(mudra, conf, meaning) {
+            $('mudraName').textContent = mudra;
+            $('currentName').textContent = mudra;
+            $('currentMeaning').textContent = meaning || meanings[mudra] || '';
+
+            var now = Date.now();
+            if (mudra !== 'Unknown' && conf >= 0.5 && (mudra !== lastMudra || now - lastTime > 1000)) {
+                addHistory(mudra, conf);
+                lastMudra = mudra;
+                lastTime = now;
+            }
+        }
+
+        function addHistory(mudra, conf) {
+            if (!uniqueMap[mudra]) {
+                uniqueMap[mudra] = { mudra: mudra, conf: conf };
+                $('uniqueCount').textContent = Object.keys(uniqueMap).length;
+                renderHistory();
+            }
+        }
+
+        function renderHistory() {
+            var mudras = Object.values(uniqueMap);
+            if (!mudras.length) {
+                $('historyList').innerHTML = '<div class="empty-state">No mudras detected yet</div>';
+                return;
+            }
+            var html = '';
+            for (var i = 0; i < mudras.length; i++) {
+                var h = mudras[i];
+                html += '<div class="history-item">';
+                html += '<div class="history-abbr">' + h.mudra.substring(0, 2) + '</div>';
+                html += '<div class="history-info"><div class="history-name">' + h.mudra + '</div>';
+                html += '<div class="history-time">' + (meanings[h.mudra] || '') + '</div></div>';
+                html += '</div>';
+            }
+            $('historyList').innerHTML = html;
+        }
+
+        function updateTime() {
+            var s = Math.floor((Date.now() - startTime) / 1000);
+            var m = Math.floor(s / 60);
+            s = s % 60;
+            $('duration').textContent = m + ':' + (s < 10 ? '0' : '') + s;
+        }
+
+        function reset() {
+            stop();
+            uniqueMap = {};
+            lastMudra = null;
+            $('uniqueCount').textContent = '0';
+            $('duration').textContent = '0:00';
+            $('currentName').textContent = '--';
+            $('currentMeaning').textContent = 'Waiting for detection';
+            $('mudraName').textContent = '--';
+            renderHistory();
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAPI();
+            $('startBtn').addEventListener('click', start);
+            $('stopBtn').addEventListener('click', stop);
+            $('resetBtn').addEventListener('click', reset);
+        });
+    })();
+    </script>
+</body>
+</html>

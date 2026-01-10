@@ -5,17 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Practice Bharatanatyam mudras with real-time AI detection">
     <title>Live Detection - Mudra Academy</title>
-    
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../css/styles.css">
     <link rel="stylesheet" href="../css/pages.css">
-    
+
     <!-- MediaPipe Hands for client-side landmark detection -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.min.js" crossorigin="anonymous"></script>
-    
+
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%238B2942' width='100' height='100' rx='20'/%3E%3Ctext x='50' y='65' font-size='50' text-anchor='middle' fill='%23D4A84B' font-family='serif'%3EM%3C/text%3E%3C/svg%3E">
 
     <style>
@@ -252,11 +252,10 @@
             <ul class="nav-links">
                 <li><a href="../index.html#features">Features</a></li>
                 <li><a href="../index.html#games">Games</a></li>
-                <li><a href="detection-mode.html" class="active">Live Detection</a></li>
                 <li><a href="library.html">Library</a></li>
             </ul>
             <div class="nav-cta">
-                <a href="learn.html" class="btn btn-primary">Start Learning</a>
+                <a href="detection-mode.html" class="btn btn-primary">Live Detection</a>
             </div>
             <button class="mobile-menu-btn" aria-label="Toggle menu">
                 <span></span>
@@ -434,20 +433,20 @@
         // Draw landmarks on canvas (called every frame by MediaPipe)
         function drawLandmarks(landmarks) {
             if (!landmarkCtx) return;
-            
+
             var w = landmarkCanvas.width;
             var h = landmarkCanvas.height;
-            
+
             // Clear previous frame
             landmarkCtx.clearRect(0, 0, w, h);
-            
+
             if (!landmarks || landmarks.length < 21) return;
-            
+
             // Draw connections first (lines between landmarks)
             landmarkCtx.strokeStyle = 'rgba(212, 168, 75, 0.8)';
             landmarkCtx.lineWidth = 3;
             landmarkCtx.lineCap = 'round';
-            
+
             HAND_CONNECTIONS.forEach(function(conn) {
                 var start = landmarks[conn[0]];
                 var end = landmarks[conn[1]];
@@ -458,17 +457,17 @@
                     landmarkCtx.stroke();
                 }
             });
-            
+
             // Draw landmark points
             landmarks.forEach(function(lm, index) {
                 var x = lm.x * w;
                 var y = lm.y * h;
-                
+
                 if (index === 0) {
                     // Wrist - larger, primary color
                     landmarkCtx.fillStyle = '#8B2942';
                     landmarkCtx.beginPath();
-                    landmarkCtx.arc(x, y, 8, 0, Math.PI * 2);
+                    landmarkCtx.arc(x, y, 4, 0, Math.PI * 2);
                     landmarkCtx.fill();
                     landmarkCtx.strokeStyle = '#fff';
                     landmarkCtx.lineWidth = 2;
@@ -477,7 +476,7 @@
                     // Fingertips - gold with white border
                     landmarkCtx.fillStyle = '#D4A84B';
                     landmarkCtx.beginPath();
-                    landmarkCtx.arc(x, y, 7, 0, Math.PI * 2);
+                    landmarkCtx.arc(x, y, 4, 0, Math.PI * 2);
                     landmarkCtx.fill();
                     landmarkCtx.strokeStyle = '#fff';
                     landmarkCtx.lineWidth = 2;
@@ -495,7 +494,7 @@
         // MediaPipe results callback - runs at high framerate
         function onResults(results) {
             if (!running) return;
-            
+
             if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
                 currentLandmarks = results.multiHandLandmarks[0];
                 drawLandmarks(currentLandmarks);
@@ -505,7 +504,7 @@
                     landmarkCtx.clearRect(0, 0, landmarkCanvas.width, landmarkCanvas.height);
                 }
             }
-            
+
             // Send to API for mudra classification (throttled)
             var now = Date.now();
             if (now - lastDetectTime >= DETECT_INTERVAL) {
@@ -517,10 +516,10 @@
         // Send frame to API for mudra classification
         function detectMudra() {
             if (!running || !video) return;
-            
+
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             var data = canvas.toDataURL('image/jpeg', 0.65).split(',')[1];
-            
+
             fetch(API + '/detect', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -541,30 +540,30 @@
             ctx = canvas.getContext('2d');
             canvas.width = 480;
             canvas.height = 360;
-            
+
             // Initialize landmark canvas
             landmarkCanvas = $('landmarkCanvas');
             landmarkCtx = landmarkCanvas.getContext('2d');
             var container = landmarkCanvas.parentElement;
             landmarkCanvas.width = container.offsetWidth;
             landmarkCanvas.height = container.offsetHeight;
-            
+
             // Initialize MediaPipe Hands
             hands = new Hands({
                 locateFile: function(file) {
                     return 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/' + file;
                 }
             });
-            
+
             hands.setOptions({
                 maxNumHands: 1,
                 modelComplexity: 1,
                 minDetectionConfidence: 0.7,
                 minTrackingConfidence: 0.5
             });
-            
+
             hands.onResults(onResults);
-            
+
             // Initialize camera
             camera = new Camera(video, {
                 onFrame: async function() {
@@ -575,7 +574,7 @@
                 width: 640,
                 height: 480
             });
-            
+
             camera.start().then(function() {
                 $('placeholder').style.display = 'none';
                 $('startBtn').style.display = 'none';
@@ -592,16 +591,16 @@
         function stop() {
             running = false;
             clearInterval(sessionTimer);
-            
+
             if (camera) {
                 camera.stop();
             }
-            
+
             // Clear landmark canvas
             if (landmarkCtx) {
                 landmarkCtx.clearRect(0, 0, landmarkCanvas.width, landmarkCanvas.height);
             }
-            
+
             $('placeholder').style.display = 'flex';
             $('startBtn').style.display = 'inline-flex';
             $('stopBtn').style.display = 'none';

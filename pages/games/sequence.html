@@ -5,15 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Test your knowledge of mudra sequences - arrange mudras in the correct Bharatanatyam order">
     <title>Mudra Sequence - Mudra Academy</title>
-    
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../../css/styles.css">
     <link rel="stylesheet" href="../../css/pages.css">
-    
+
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%238B2942' width='100' height='100' rx='20'/%3E%3Ctext x='50' y='65' font-size='50' text-anchor='middle' fill='%23D4A84B' font-family='serif'%3EM%3C/text%3E%3C/svg%3E">
-    
+
     <style>
         /* Sequence Game Styles */
         .sequence-container {
@@ -851,18 +851,17 @@
                 </div>
                 <span class="logo-text">Mudra Academy</span>
             </a>
-            
+
             <ul class="nav-links">
                 <li><a href="../../index.html#features">Features</a></li>
                 <li><a href="../../index.html#games">Games</a></li>
-                <li><a href="../../index.html#webcam">Live Detection</a></li>
                 <li><a href="../library.html">Library</a></li>
             </ul>
-            
+
             <div class="nav-cta">
-                <a href="../learn.html" class="btn btn-primary">Start Learning</a>
+                <a href="../detection-mode.html" class="btn btn-primary">Live Detection</a>
             </div>
-            
+
             <button class="mobile-menu-btn" aria-label="Toggle menu">
                 <span></span>
                 <span></span>
@@ -888,7 +887,7 @@
                 </div>
                 <h1>Mudra Sequence Challenge</h1>
                 <p>Test your understanding of correct mudra order in Bharatanatyam. You will be shown shuffled mudras - arrange them in the proper traditional sequence!</p>
-                
+
                 <div class="sequence-info-cards">
                     <div class="sequence-info-card">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1004,7 +1003,7 @@
                         </div>
                         <h3 class="feedback-title" id="feedbackTitle">Well Done!</h3>
                         <p class="feedback-text" id="feedbackText"></p>
-                        
+
                         <div class="correct-order-display" id="correctOrderDisplay" style="display:none;">
                             <h4>Correct Order:</h4>
                             <div class="correct-order-list" id="correctOrderList">
@@ -1260,11 +1259,11 @@
         function startGame() {
             // Enter fullscreen for immersive experience
             enterFullscreen();
-            
+
             currentRound = 0;
             score = 0;
             usedSequences = [];
-            
+
             document.getElementById('startScreen').style.display = 'none';
             document.getElementById('gameArea').classList.add('active');
             document.getElementById('resultsScreen').classList.remove('active');
@@ -1277,7 +1276,7 @@
         function generateProgressDots() {
             const dotsContainer = document.getElementById('progressDots');
             dotsContainer.innerHTML = '';
-            
+
             for (let i = 0; i < totalRounds; i++) {
                 const dot = document.createElement('div');
                 dot.className = 'progress-dot';
@@ -1310,7 +1309,7 @@
                 usedSequences = [];
                 availableSequences = mudraSequences;
             }
-            
+
             const randomIndex = Math.floor(Math.random() * availableSequences.length);
             const originalIndex = mudraSequences.indexOf(availableSequences[randomIndex]);
             usedSequences.push(originalIndex);
@@ -1402,7 +1401,7 @@
         function handleDrop(e) {
             e.preventDefault();
             this.classList.remove('drag-over');
-            
+
             if (draggedItem && !answered) {
                 addToDropZone(draggedItem);
             }
@@ -1410,7 +1409,7 @@
 
         function handleClick(e) {
             if (answered) return;
-            
+
             const item = e.currentTarget;
             if (item.classList.contains('in-dropzone')) {
                 removeFromDropZone(item);
@@ -1432,7 +1431,7 @@
         function addToDropZone(item) {
             const dropZone = document.getElementById('dropZone');
             const placeholder = document.getElementById('dropPlaceholder');
-            
+
             if (placeholder) {
                 placeholder.remove();
             }
@@ -1450,7 +1449,7 @@
 
         function removeFromDropZone(item) {
             const shuffledContainer = document.getElementById('shuffledMudras');
-            
+
             item.classList.remove('in-dropzone');
             shuffledContainer.appendChild(item);
 
@@ -1463,7 +1462,7 @@
         function checkDropZonePlaceholder() {
             const dropZone = document.getElementById('dropZone');
             const itemsInZone = dropZone.querySelectorAll('.mudra-item');
-            
+
             if (itemsInZone.length === 0) {
                 dropZone.innerHTML = '<div class="drop-zone-placeholder" id="dropPlaceholder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg><span>Drop mudras here in order</span></div>';
             }
@@ -1485,7 +1484,7 @@
             if (answered) return;
             answered = true;
 
-            const isCorrect = userOrder.every((mudra, index) => 
+            const isCorrect = userOrder.every((mudra, index) =>
                 mudra.name === currentSequence.mudras[index].name
             );
 
@@ -1501,24 +1500,24 @@
             if (isCorrect) {
                 score++;
                 document.getElementById('scoreDisplay').textContent = score + '/' + totalRounds;
-                
+
                 feedbackSection.classList.add('show', 'correct');
                 feedbackTitle.textContent = 'Well Done!';
                 feedbackText.textContent = 'You arranged the mudras correctly! ' + currentSequence.explanation;
                 correctOrderDisplay.style.display = 'none';
-                
+
                 document.getElementById('feedbackIconCorrect').style.display = 'block';
                 document.getElementById('feedbackIconIncorrect').style.display = 'none';
             } else {
                 feedbackSection.classList.add('show', 'incorrect');
                 feedbackTitle.textContent = 'Not Quite Right';
                 feedbackText.textContent = currentSequence.explanation;
-                
+
                 // Show correct order
                 correctOrderDisplay.style.display = 'block';
                 const correctOrderList = document.getElementById('correctOrderList');
                 correctOrderList.innerHTML = '';
-                
+
                 currentSequence.mudras.forEach((mudra, index) => {
                     const orderItem = document.createElement('div');
                     orderItem.className = 'correct-order-item';
@@ -1542,7 +1541,7 @@
         // Next Round
         function nextRound() {
             currentRound++;
-            
+
             if (currentRound >= totalRounds) {
                 showResults();
             } else {
@@ -1554,7 +1553,7 @@
         function showResults() {
             // Exit fullscreen when game ends
             exitFullscreen();
-            
+
             document.getElementById('gameArea').classList.remove('active');
             document.getElementById('resultsScreen').classList.add('active');
 
@@ -1601,7 +1600,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
             const navLinks = document.querySelector('.nav-links');
-            
+
             if (mobileMenuBtn && navLinks) {
                 mobileMenuBtn.addEventListener('click', function() {
                     navLinks.classList.toggle('active');

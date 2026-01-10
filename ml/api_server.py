@@ -1,6 +1,7 @@
 """
 MUDRA DETECTION API SERVER
 Flask API server that wraps the hybrid ML model for web integration.
+Supports both single-hand (MediaPipe + RF) and double-hand (YOLO) detection.
 """
 
 from flask import Flask, request, jsonify
@@ -24,6 +25,44 @@ from hybrid_webcam import (
     ML_CONF_THRESHOLD
 )
 
+# ============================================
+# YOLO Model for Double-Hand Detection
+# ============================================
+try:
+    from ultralytics import YOLO
+    YOLO_MODEL_PATH = os.path.join(os.path.dirname(__file__), 'best.pt')
+    if os.path.exists(YOLO_MODEL_PATH):
+        yolo_model = YOLO(YOLO_MODEL_PATH)
+        YOLO_LOADED = True
+        print(f"YOLO model loaded from {YOLO_MODEL_PATH}")
+    else:
+        yolo_model = None
+        YOLO_LOADED = False
+        print(f"YOLO model not found at {YOLO_MODEL_PATH}")
+except ImportError:
+    yolo_model = None
+    YOLO_LOADED = False
+    print("ultralytics not installed - double-hand detection disabled")
+
+# Double-hand mudra class names (matching the trained model exactly)
+DOUBLE_HAND_CLASSES = {
+    0: "Chakra",
+    1: "Karkota",
+    2: "Katariswastika",
+    3: "Nagabandha",
+    4: "Pasha",
+    5: "Shanka"
+}
+
+DOUBLE_HAND_MEANINGS = {
+    "Chakra": "Disc/Wheel - Vishnu's divine weapon",
+    "Karkota": "Crab - Interlocked fingers showing strength",
+    "Katariswastika": "Crossed scissors - Both hands in Kartarimukha crossed",
+    "Nagabandha": "Serpent bond - Intertwined snakes",
+    "Pasha": "Noose - Rope or binding",
+    "Shanka": "Conch shell - Sacred symbol"
+}
+
 app = Flask(__name__)
 CORS(app)
 
@@ -46,7 +85,9 @@ def health():
         "model_loaded": True,
         "mudra_count": len(SUPPORTED_MUDRAS),
         "rule_based_mudras": len(RULE_MUDRA_FUNCTIONS),
-        "ml_mudras": len(model_classes)
+        "ml_mudras": len(model_classes),
+        "double_hand_model": YOLO_LOADED,
+        "double_hand_mudras": len(DOUBLE_HAND_CLASSES) if YOLO_LOADED else 0
     }), 200
 
 @app.route('/mudras', methods=['GET'])
@@ -124,12 +165,97 @@ def detect():
         print(f"Error: {traceback.format_exc()}")
         return jsonify({"success": False, "error": str(e)}), 500
 
+
+# ============================================
+# DOUBLE-HAND DETECTION ENDPOINT (YOLO)
+# ============================================
+@app.route('/detect-double', methods=['POST'])
+def detect_double():
+    """Detect double-hand mudras using YOLO model"""
+    try:
+        if not YOLO_LOADED or yolo_model is None:
+            return jsonify({
+                "success": False,
+                "error": "Double-hand model not loaded"
+            }), 503
+        
+        data = request.get_json()
+        
+        if not data or 'image' not in data:
+            return jsonify({"success": False, "error": "No image provided"}), 400
+        
+        image_data = data['image']
+        if ',' in image_data:
+            image_data = image_data.split(',')[1]
+        
+        image_bytes = base64.b64decode(image_data)
+        image = Image.open(BytesIO(image_bytes))
+        frame = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+        
+        # Run YOLO inference
+        results = yolo_model(frame, conf=0.5, verbose=False)
+        
+        mudra_name = "Unknown"
+        confidence = 0.0
+        bbox = None
+        
+        for r in results:
+            if r.boxes is None or len(r.boxes) == 0:
+                continue
+            
+            # Get the detection with highest confidence
+            boxes = r.boxes.xyxy.cpu().numpy()
+            scores = r.boxes.conf.cpu().numpy()
+            classes = r.boxes.cls.cpu().numpy()
+            
+            if len(scores) > 0:
+                best_idx = np.argmax(scores)
+                cls_id = int(classes[best_idx])
+                mudra_name = DOUBLE_HAND_CLASSES.get(cls_id, "Unknown")
+                confidence = float(scores[best_idx])
+                box = boxes[best_idx]
+                bbox = [int(box[0]), int(box[1]), int(box[2]), int(box[3])]
+        
+        response_data = {
+            "success": True,
+            "mudra": mudra_name,
+            "confidence": confidence,
+            "meaning": DOUBLE_HAND_MEANINGS.get(mudra_name, ""),
+            "method": "YOLO"
+        }
+        
+        if bbox:
+            response_data["bbox"] = bbox
+        
+        return jsonify(response_data), 200
+        
+    except Exception as e:
+        import traceback
+        print(f"Double-hand detection error: {traceback.format_exc()}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/double-mudras', methods=['GET'])
+def get_double_mudras():
+    """Get list of supported double-hand mudras"""
+    return jsonify({
+        "mudras": list(DOUBLE_HAND_CLASSES.values()),
+        "count": len(DOUBLE_HAND_CLASSES),
+        "meanings": DOUBLE_HAND_MEANINGS,
+        "model_loaded": YOLO_LOADED
+    }), 200
+
+
 if __name__ == '__main__':
     print("=" * 60)
     print("MUDRA DETECTION API SERVER")
     print("=" * 60)
-    print(f"Loaded {len(SUPPORTED_MUDRAS)} mudra classes")
-    print(f"Rule-based: {len(RULE_MUDRA_FUNCTIONS)}, ML: {len(model_classes)}")
+    print(f"Single-hand mudras: {len(SUPPORTED_MUDRAS)}")
+    print(f"  - Rule-based: {len(RULE_MUDRA_FUNCTIONS)}")
+    print(f"  - ML-based: {len(model_classes)}")
+    print(f"Double-hand mudras: {len(DOUBLE_HAND_CLASSES) if YOLO_LOADED else 'Not loaded'}")
+    print(f"YOLO model: {'Loaded' if YOLO_LOADED else 'Not available'}")
+    print("-" * 60)
     print(f"Server starting on http://localhost:5000")
     print("=" * 60)
     
