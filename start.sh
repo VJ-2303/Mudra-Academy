@@ -93,8 +93,8 @@ start_api_server() {
     
     cd "$ML_DIR"
     
-    # Use the venv's python directly
-    nohup "$ML_DIR/.venv/bin/python" api_server.py > "$PROJECT_ROOT/api_server.log" 2>&1 &
+    # Use the venv's python directly (no log file - output discarded)
+    nohup "$ML_DIR/.venv/bin/python" api_server.py > /dev/null 2>&1 &
     API_PID=$!
     echo $API_PID > "$PID_FILE_API"
     
@@ -105,7 +105,6 @@ start_api_server() {
         print_success "API running at: http://localhost:$API_PORT"
     else
         print_error "Failed to start API server"
-        cat "$PROJECT_ROOT/api_server.log"
         exit 1
     fi
     
@@ -117,7 +116,8 @@ start_frontend_server() {
     
     cd "$PROJECT_ROOT"
     
-    nohup python3 -m http.server $FRONTEND_PORT > "$PROJECT_ROOT/frontend_server.log" 2>&1 &
+    # No log file - output discarded
+    nohup python3 -m http.server $FRONTEND_PORT > /dev/null 2>&1 &
     FRONTEND_PID=$!
     echo $FRONTEND_PID > "$PID_FILE_FRONTEND"
     

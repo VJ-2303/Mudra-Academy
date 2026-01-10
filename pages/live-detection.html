@@ -377,13 +377,16 @@
     <script>
     (function() {
         var API = 'http://localhost:5000';
-        var DETECT_INTERVAL = 200; // API calls less frequent
+        var DETECT_INTERVAL = 100; // SPEED FIX: ~10 FPS for faster response (was 250ms)
         var running = false;
         var video, canvas, ctx, landmarkCanvas, landmarkCtx, sessionTimer, startTime;
         var hands, camera;
         var uniqueMap = {}, lastMudra = null, lastTime = 0;
         var lastDetectTime = 0;
         var currentLandmarks = null;
+        
+        // Unique session ID for FSM state tracking
+        var SESSION_ID = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
         // Hand landmark connections (MediaPipe hand model)
         var HAND_CONNECTIONS = [
@@ -518,18 +521,21 @@
             if (!running || !video) return;
 
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            var data = canvas.toDataURL('image/jpeg', 0.65).split(',')[1];
+            var data = canvas.toDataURL('image/jpeg', 0.75).split(',')[1]; // Better quality
 
             fetch(API + '/detect', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ image: data })
+                body: JSON.stringify({ 
+                    image: data,
+                    session_id: SESSION_ID  // Include session ID for FSM state
+                })
             }).then(function(r) { return r.json(); })
             .then(function(res) {
                 if (res.success && res.mudra && res.mudra !== 'Unknown') {
-                    show(res.mudra, res.confidence || 0);
+                    show(res.mudra, res.confidence || 0, res.method || '');
                 } else {
-                    show('Unknown', 0);
+                    show('Unknown', 0, '');
                 }
             }).catch(function() {});
         }
@@ -538,8 +544,9 @@
             video = $('webcam');
             canvas = $('canvas');
             ctx = canvas.getContext('2d');
-            canvas.width = 480;
-            canvas.height = 360;
+            // Match Python webcam resolution for consistent detection
+            canvas.width = 640;
+            canvas.height = 480;
 
             // Initialize landmark canvas
             landmarkCanvas = $('landmarkCanvas');
@@ -607,16 +614,38 @@
             $('mudraName').style.display = 'none';
         }
 
-        function show(mudra, conf) {
-            $('mudraName').textContent = mudra;
-            $('currentName').textContent = mudra;
-            $('currentMeaning').textContent = meanings[mudra] || '';
-            var now = Date.now();
-            if (mudra !== 'Unknown' && conf >= 0.3 && (mudra !== lastMudra || now - lastTime > 500)) {
-                addHistory(mudra, conf);
-                lastMudra = mudra;
-                lastTime = now;
+        // Track last displayed mudra for sticky display (prevents flickering)
+        var displayedMudra = null;
+        var displayedConf = 0;
+
+        function show(mudra, conf, method) {
+            // STICKY DISPLAY: Only update UI when we have a confirmed mudra
+            // This prevents flickering by keeping the last confirmed mudra visible
+            if (mudra !== 'Unknown' && mudra !== 'No hand detected' && conf > 0) {
+                // Update display with confirmed mudra
+                displayedMudra = mudra;
+                displayedConf = conf;
+                $('mudraName').textContent = mudra;
+                $('currentName').textContent = mudra;
+                $('currentMeaning').textContent = meanings[mudra] || '';
+                
+                // Add to history if it's a new detection
+                var now = Date.now();
+                var threshold = (method === 'RULE') ? 0.5 : 0.3;
+                
+                if (conf >= threshold && (mudra !== lastMudra || now - lastTime > 800)) {
+                    addHistory(mudra, conf);
+                    lastMudra = mudra;
+                    lastTime = now;
+                }
+            } else if (mudra === 'No hand detected') {
+                // Only show "No hand" if we actually have no hand
+                $('mudraName').textContent = 'Show mudra...';
+                $('currentName').textContent = '--';
+                $('currentMeaning').textContent = 'Waiting for detection';
+                displayedMudra = null;
             }
+            // If mudra === 'Unknown', keep displaying the last confirmed mudra (sticky)
         }
 
         function addHistory(mudra, conf) {
@@ -654,6 +683,17 @@
 
         function reset() {
             stop();
+            
+            // Reset server-side FSM state
+            fetch(API + '/reset-session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: SESSION_ID })
+            }).catch(function() {});
+            
+            // Generate new session ID
+            SESSION_ID = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            
             uniqueMap = {};
             lastMudra = null;
             $('uniqueCount').textContent = '0';

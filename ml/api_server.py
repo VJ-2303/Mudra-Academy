@@ -2,6 +2,8 @@
 MUDRA DETECTION API SERVER
 Flask API server that wraps the hybrid ML model for web integration.
 Supports both single-hand (MediaPipe + RF) and double-hand (YOLO) detection.
+
+KEY FIX: Added session-based state management with FSM to match Python webcam accuracy.
 """
 
 from flask import Flask, request, jsonify
@@ -14,6 +16,28 @@ from io import BytesIO
 from PIL import Image
 import sys
 import os
+from types import SimpleNamespace
+from collections import defaultdict
+import time
+import logging
+
+# ============================================
+# LOGGING CONFIGURATION
+# ============================================
+# Set to True to enable all logging, False to disable
+ENABLE_LOGGING = False
+
+if not ENABLE_LOGGING:
+    # Disable Flask/Werkzeug request logging
+    logging.getLogger('werkzeug').setLevel(logging.ERROR)
+    # Disable other loggers
+    logging.getLogger('PIL').setLevel(logging.ERROR)
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Disable TensorFlow logs
+    
+def log(message):
+    """Print message only if logging is enabled."""
+    if ENABLE_LOGGING:
+        print(message)
 
 sys.path.insert(0, os.path.dirname(__file__))
 
@@ -22,7 +46,8 @@ from hybrid_webcam import (
     get_scale_ref,
     detect_mudra_hybrid,
     RULE_MUDRA_FUNCTIONS,
-    ML_CONF_THRESHOLD
+    ML_CONF_THRESHOLD,
+    MudraFSM  # Import FSM for state management
 )
 
 # ============================================
@@ -30,53 +55,105 @@ from hybrid_webcam import (
 # ============================================
 try:
     from ultralytics import YOLO
-    YOLO_MODEL_PATH = os.path.join(os.path.dirname(__file__), 'best.pt')
+    YOLO_MODEL_PATH = os.path.join(os.path.dirname(__file__), 'kkpv.pt')
     if os.path.exists(YOLO_MODEL_PATH):
         yolo_model = YOLO(YOLO_MODEL_PATH)
         YOLO_LOADED = True
-        print(f"YOLO model loaded from {YOLO_MODEL_PATH}")
+        log(f"YOLO model loaded from {YOLO_MODEL_PATH}")
     else:
         yolo_model = None
         YOLO_LOADED = False
-        print(f"YOLO model not found at {YOLO_MODEL_PATH}")
+        log(f"YOLO model not found at {YOLO_MODEL_PATH}")
 except ImportError:
     yolo_model = None
     YOLO_LOADED = False
-    print("ultralytics not installed - double-hand detection disabled")
+    log("ultralytics not installed - double-hand detection disabled")
 
 # Double-hand mudra class names (matching the trained model exactly)
 DOUBLE_HAND_CLASSES = {
-    0: "Chakra",
-    1: "Karkota",
-    2: "Katariswastika",
-    3: "Nagabandha",
-    4: "Pasha",
-    5: "Shanka"
+    0: "Anjali",
+    1: "Naagabandha",
+    2: "Chakra",
+    3: "Karkota",
+    4: "Katariswastika",
+    5: "Pasha",
+    6: "Shanka",
+    7: "Shivalinga"
 }
 
 DOUBLE_HAND_MEANINGS = {
+    "Anjali": "Salutation - Palms joined in prayer position",
+    "Naagabandha": "Serpent bond - Intertwined snakes",
     "Chakra": "Disc/Wheel - Vishnu's divine weapon",
     "Karkota": "Crab - Interlocked fingers showing strength",
     "Katariswastika": "Crossed scissors - Both hands in Kartarimukha crossed",
-    "Nagabandha": "Serpent bond - Intertwined snakes",
     "Pasha": "Noose - Rope or binding",
-    "Shanka": "Conch shell - Sacred symbol"
+    "Shanka": "Conch shell - Sacred symbol",
+    "Shivalinga": "Shiva's symbol - Sacred emblem of Lord Shiva"
 }
-
 app = Flask(__name__)
 CORS(app)
 
-print(f"ML Model loaded with {len(model_classes)} classes")
-
 mp_hands = mp.solutions.hands
-hands = mp_hands.Hands(
-    static_image_mode=False,
-    max_num_hands=1,
-    min_detection_confidence=0.7,
-    min_tracking_confidence=0.7
-)
+
+# Note: We'll create per-session MediaPipe hands instances for proper tracking
 
 SUPPORTED_MUDRAS = sorted(set(list(RULE_MUDRA_FUNCTIONS.keys()) + list(model_classes)))
+
+# ============================================
+# SESSION STATE MANAGEMENT
+# ============================================
+# Store per-session state for FSM, previous landmarks, AND MediaPipe hands instance
+# This fixes the accuracy issue where ML model couldn't work without prev_landmarks
+
+class SessionState:
+    """Maintains state for a detection session (per client)."""
+    def __init__(self):
+        self.fsm = MudraFSM()
+        # SPEED FIX: Reduce FSM thresholds for faster web response
+        self.fsm.ENTER_THRESHOLD = 2  # Reduced from 3 to 2 frames for faster ML confirmation
+        self.fsm.EXIT_THRESHOLD = 2
+        self.fsm.MAX_MISMATCH = 1
+        
+        self.prev_landmarks = None
+        self.last_access = time.time()
+        # Per-session MediaPipe hands for proper tracking between frames
+        self.hands = mp_hands.Hands(
+            static_image_mode=False,  # Video mode for better tracking
+            max_num_hands=1,
+            min_detection_confidence=0.6,  # SPEED FIX: Lowered from 0.7 for faster detection
+            min_tracking_confidence=0.6    # SPEED FIX: Lowered from 0.7 for faster tracking
+        )
+    
+    def update_landmarks(self, landmarks):
+        """Store current landmarks as previous for next frame."""
+        self.prev_landmarks = [SimpleNamespace(x=lm.x, y=lm.y, z=lm.z) for lm in landmarks]
+        self.last_access = time.time()
+    
+    def close(self):
+        """Clean up MediaPipe resources."""
+        if self.hands:
+            self.hands.close()
+
+# Session storage (simple in-memory, keyed by session_id)
+sessions = defaultdict(SessionState)
+SESSION_TIMEOUT = 60  # seconds - clean up old sessions
+
+def get_session(session_id):
+    """Get or create a session state."""
+    if session_id is None:
+        session_id = "default"
+    
+    # Clean up old sessions periodically
+    current_time = time.time()
+    expired = [sid for sid, state in sessions.items() 
+               if current_time - state.last_access > SESSION_TIMEOUT]
+    for sid in expired:
+        sessions[sid].close()  # Clean up MediaPipe resources
+        del sessions[sid]
+    
+    return sessions[session_id]
+
 
 @app.route('/health', methods=['GET'])
 def health():
@@ -101,11 +178,27 @@ def get_mudras():
 
 @app.route('/detect', methods=['POST'])
 def detect():
+    """
+    Single-hand mudra detection with FSM state management.
+    
+    This endpoint now maintains session state to:
+    1. Track previous landmarks for hand stability detection
+    2. Use FSM for debouncing (requires 3 consecutive frames for ML mudras)
+    3. Match the accuracy of the standalone Python webcam
+    
+    Optional request parameters:
+    - session_id: Unique ID to maintain state across requests (default: "default")
+    - include_landmarks: If true, include landmark coordinates in response
+    """
     try:
         data = request.get_json()
         
         if not data or 'image' not in data:
             return jsonify({"success": False, "error": "No image provided"}), 400
+        
+        # Get or create session state
+        session_id = data.get('session_id', 'default')
+        session = get_session(session_id)
         
         image_data = data['image']
         if ',' in image_data:
@@ -115,16 +208,30 @@ def detect():
         image = Image.open(BytesIO(image_bytes))
         frame = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
         
+        # Resize to consistent size (matching Python webcam)
+        frame = cv2.resize(frame, (640, 480))
+        
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = hands.process(frame_rgb)
+        # Use session's MediaPipe hands for proper tracking between frames
+        results = session.hands.process(frame_rgb)
         
         if not results.multi_hand_landmarks:
+            # No hand - update FSM state
+            display_text, _, _ = session.fsm.update(
+                hand_present=False,
+                candidate_name=None,
+                candidate_conf=0.0,
+                candidate_method=None
+            )
+            session.prev_landmarks = None
+            
             return jsonify({
                 "success": True,
                 "hand_detected": False,
                 "mudra": "No hand detected",
                 "confidence": 0.0,
-                "method": "NONE"
+                "method": "NONE",
+                "fsm_state": session.fsm.state
             }), 200
         
         hand_landmarks = results.multi_hand_landmarks[0]
@@ -133,26 +240,52 @@ def detect():
         handedness = results.multi_handedness[0] if results.multi_handedness else None
         handedness_label = handedness.classification[0].label if handedness else "Right"
         
+        # Run hybrid detection with previous landmarks for stability check
         mudra_name, confidence, method = detect_mudra_hybrid(
             landmarks, 
             handedness_label, 
-            prev_landmarks=None
+            prev_landmarks=session.prev_landmarks  # FIX: Now passing previous landmarks
         )
         
-        if mudra_name == "Stabilizing...":
-            mudra_name = "Unknown"
-            confidence = 0.0
-            method = "NONE"
+        # Normalize candidate for FSM
+        if mudra_name in ["Unknown", "Stabilizing..."]:
+            candidate_name = None
+            candidate_conf = 0.0
+            candidate_method = None
+        else:
+            candidate_name = mudra_name
+            candidate_conf = confidence
+            candidate_method = method
         
-        if method is None:
-            method = "NONE"
+        # Update FSM with detection result
+        display_text, disp_conf, disp_method = session.fsm.update(
+            hand_present=True,
+            candidate_name=candidate_name,
+            candidate_conf=candidate_conf,
+            candidate_method=candidate_method
+        )
+        
+        # Store current landmarks for next frame's stability check
+        session.update_landmarks(landmarks)
+        
+        # Determine final output
+        if display_text in ["Show mudra...", "Detecting...", "Stabilizing..."]:
+            final_mudra = "Unknown"
+            final_conf = 0.0
+            final_method = "NONE"
+        else:
+            final_mudra = display_text
+            final_conf = disp_conf
+            final_method = disp_method if disp_method else "NONE"
         
         response_data = {
             "success": True,
             "hand_detected": True,
-            "mudra": mudra_name,
-            "confidence": float(confidence),
-            "method": method
+            "mudra": final_mudra,
+            "confidence": float(final_conf),
+            "method": final_method,
+            "fsm_state": session.fsm.state,
+            "raw_detection": mudra_name  # For debugging
         }
         
         if data.get('include_landmarks', False):
@@ -161,8 +294,23 @@ def detect():
         return jsonify(response_data), 200
         
     except Exception as e:
-        import traceback
-        print(f"Error: {traceback.format_exc()}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+# Endpoint to reset a session's FSM state
+@app.route('/reset-session', methods=['POST'])
+def reset_session():
+    """Reset FSM state for a session (useful when user clicks Reset)."""
+    try:
+        data = request.get_json() or {}
+        session_id = data.get('session_id', 'default')
+        
+        if session_id in sessions:
+            sessions[session_id].close()  # Clean up old MediaPipe instance
+            sessions[session_id] = SessionState()  # Create fresh session
+        
+        return jsonify({"success": True, "message": "Session reset"}), 200
+    except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -230,8 +378,6 @@ def detect_double():
         return jsonify(response_data), 200
         
     except Exception as e:
-        import traceback
-        print(f"Double-hand detection error: {traceback.format_exc()}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -247,16 +393,17 @@ def get_double_mudras():
 
 
 if __name__ == '__main__':
-    print("=" * 60)
-    print("MUDRA DETECTION API SERVER")
-    print("=" * 60)
-    print(f"Single-hand mudras: {len(SUPPORTED_MUDRAS)}")
-    print(f"  - Rule-based: {len(RULE_MUDRA_FUNCTIONS)}")
-    print(f"  - ML-based: {len(model_classes)}")
-    print(f"Double-hand mudras: {len(DOUBLE_HAND_CLASSES) if YOLO_LOADED else 'Not loaded'}")
-    print(f"YOLO model: {'Loaded' if YOLO_LOADED else 'Not available'}")
-    print("-" * 60)
-    print(f"Server starting on http://localhost:5000")
-    print("=" * 60)
+    log("=" * 60)
+    log("MUDRA DETECTION API SERVER")
+    log("=" * 60)
+    log(f"Single-hand mudras: {len(SUPPORTED_MUDRAS)}")
+    log(f"  - Rule-based: {len(RULE_MUDRA_FUNCTIONS)}")
+    log(f"  - ML-based: {len(model_classes)}")
+    log(f"Double-hand mudras: {len(DOUBLE_HAND_CLASSES) if YOLO_LOADED else 'Not loaded'}")
+    log(f"YOLO model: {'Loaded' if YOLO_LOADED else 'Not available'}")
+    log("-" * 60)
+    log(f"Logging: {'ENABLED' if ENABLE_LOGGING else 'DISABLED'}")
+    log(f"Server starting on http://localhost:5000")
+    log("=" * 60)
     
     app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
