@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,7 +9,9 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="../css/styles.css">
     <link rel="stylesheet" href="../css/pages.css">
 
@@ -92,7 +95,7 @@
             transform: translateY(-2px);
             box-shadow: var(--shadow-sm);
         }
-        
+
         .voice-status-badge {
             display: inline-flex;
             align-items: center;
@@ -117,14 +120,14 @@
             border-radius: 50%;
             background: currentColor;
         }
-        
+
         .voice-commands-card {
             background: var(--color-light);
             padding: var(--spacing-lg);
             border-radius: var(--radius-lg);
             box-shadow: var(--shadow-sm);
         }
-        
+
         .voice-commands-card h4 {
             color: var(--color-secondary);
             margin-bottom: var(--spacing-md);
@@ -139,21 +142,21 @@
             font-size: 0.9rem;
             color: var(--color-gray);
         }
-        
+
         .command-list li {
             margin-bottom: var(--spacing-sm);
             padding-bottom: var(--spacing-sm);
-            border-bottom: 1px solid rgba(0,0,0,0.05);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
             display: flex;
             justify-content: space-between;
         }
-        
+
         .command-list li:last-child {
             border-bottom: none;
             margin-bottom: 0;
             padding-bottom: 0;
         }
-        
+
         .command-keyword {
             font-weight: 700;
             color: var(--color-dark);
@@ -163,20 +166,22 @@
             .ghost-layout {
                 grid-template-columns: 1fr !important;
             }
+
             .mudra-name-large {
                 font-size: 2rem;
             }
         }
     </style>
 </head>
+
 <body>
     <nav class="navbar scrolled">
         <div class="container">
             <a href="../index.html" class="logo">
                 <div class="logo-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
-                        <path d="M12 6v6l4 2"/>
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
+                        <path d="M12 6v6l4 2" />
                     </svg>
                 </div>
                 <span class="logo-text">Mudra Academy</span>
@@ -196,11 +201,22 @@
                 <p>Align your hand with the guide using the split-view layout below.</p>
             </div>
 
-            <div class="detection-container ghost-layout" style="display: grid; grid-template-columns: 2fr 1fr; gap: var(--spacing-2xl);">
+            <div class="detection-container ghost-layout"
+                style="display: grid; grid-template-columns: 2fr 1fr; gap: var(--spacing-2xl);">
                 <!-- Left: Video Area -->
                 <div class="ghost-video-container">
                     <video id="webcam" autoplay playsinline muted></video>
                     <img id="ghost-overlay-img" src="" alt="Ghost Overlay">
+                    <canvas id="detection-canvas" style="display:none;"></canvas>
+                    <div id="match-feedback"
+                        style="position: absolute; top: 20px; right: 20px; background: rgba(40, 200, 64, 0.9); color: white; padding: 5px 15px; border-radius: 20px; opacity: 0; transition: opacity 0.3s; font-weight: bold; pointer-events: none;">
+                        Match!</div>
+                    <div id="debug-status"
+                        style="position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.6); color: white; padding: 5px 10px; border-radius: 5px; font-size: 12px; font-family: monospace;">
+                        Waiting for API...</div>
+                    <div id="match-feedback"
+                        style="position: absolute; top: 20px; right: 20px; background: rgba(40, 200, 64, 0.9); color: white; padding: 5px 15px; border-radius: 20px; opacity: 0; transition: opacity 0.3s; font-weight: bold; pointer-events: none;">
+                        Match!</div>
                 </div>
 
                 <!-- Right: Controls Sidebar -->
@@ -210,19 +226,23 @@
                             <div class="pulse-dot-large" id="voice-indicator"></div>
                             <span id="voice-status-text">Microphone off</span>
                         </div>
-                        
-                        <h3 style="font-size: 0.9rem; text-transform: uppercase; color: var(--color-gray); letter-spacing: 1px;">Current Mudra</h3>
+
+                        <h3
+                            style="font-size: 0.9rem; text-transform: uppercase; color: var(--color-gray); letter-spacing: 1px;">
+                            Current Mudra</h3>
                         <h2 class="mudra-name-large" id="current-mudra-name">Pataka</h2>
-                        
+
                         <div class="nav-buttons-large">
                             <button class="nav-btn-large" id="prev-btn" aria-label="Previous">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <polyline points="15 18 9 12 15 6"/>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polyline points="15 18 9 12 15 6" />
                                 </svg>
                             </button>
                             <button class="nav-btn-large" id="next-btn" aria-label="Next">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <polyline points="9 18 15 12 9 6"/>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polyline points="9 18 15 12 9 6" />
                                 </svg>
                             </button>
                         </div>
@@ -233,10 +253,11 @@
 
                     <div class="voice-commands-card">
                         <h4>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                                <line x1="12" y1="19" x2="12" y2="23"/>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                                <line x1="12" y1="19" x2="12" y2="23" />
                             </svg>
                             Voice Commands
                         </h4>
@@ -252,5 +273,7 @@
     </section>
 
     <script src="../js/ghost-mode.js"></script>
+    <script src="../js/chat-widget.js"></script>
 </body>
+
 </html>

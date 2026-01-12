@@ -46,7 +46,9 @@ check_dependencies() {
     
     # Check if requirements are installed using the venv's python
     print_info "Checking Python packages..."
-    if ! "$ML_DIR/.venv/bin/python" -c "import flask" 2>/dev/null; then
+    # Check if requirements are installed using the venv's python
+    print_info "Checking Python packages..."
+    if ! "$ML_DIR/.venv/bin/python" -c "import google.generativeai" 2>/dev/null; then
         print_warning "Installing required packages..."
         "$ML_DIR/.venv/bin/pip" install -q -r "$ML_DIR/requirements.txt"
         print_success "Packages installed"

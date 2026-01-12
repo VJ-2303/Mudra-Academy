@@ -9,17 +9,23 @@ KEY FIX: Added session-based state management with FSM to match Python webcam ac
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import cv2
-import numpy as np
-import mediapipe as mp
 import base64
-from io import BytesIO
+import numpy as np
 from PIL import Image
-import sys
+from io import BytesIO
+import mediapipe as mp
+import threading
+import time
 import os
+import sys
+import google.generativeai as genai
 from types import SimpleNamespace
 from collections import defaultdict
-import time
 import logging
+
+# Configuration
+API_PORT = 5000
+DEBUG = True
 
 # ============================================
 # LOGGING CONFIGURATION
@@ -49,6 +55,28 @@ from hybrid_webcam import (
     ML_CONF_THRESHOLD,
     MudraFSM  # Import FSM for state management
 )
+
+# ============================================================
+# Load Models
+# ============================================================
+
+# 0. Configure Gemini (Chatbot)
+# ------------------------------------------------------------
+# TODO: USER - REPLACE WITH YOUR ACTUAL API KEY
+GEMINI_API_KEY = "AIzaSyA3eRUFLP0qAOZXuIltuUxhy8niX6-YODI"
+genai.configure(api_key=GEMINI_API_KEY)
+
+try:
+    chat_model = genai.GenerativeModel('gemini-flash-latest')
+    CHAT_LOADED = True
+    print("✓ Gemini Chat model configured")
+except Exception as e:
+    print(f"✗ Failed to configure Gemini: {e}")
+    CHAT_LOADED = False
+
+# 1. Load Random Forest Model (Single Hand)
+# ------------------------------------------------------------
+# The RF model is loaded within hybrid_webcam.py
 
 # ============================================
 # YOLO Model for Double-Hand Detection
@@ -309,8 +337,52 @@ def reset_session():
             sessions[session_id].close()  # Clean up old MediaPipe instance
             sessions[session_id] = SessionState()  # Create fresh session
         
-        return jsonify({"success": True, "message": "Session reset"}), 200
+        return jsonify({
+            "success": True, 
+            "message": "Session reset successfully",
+            "fsm_state": "S0_NO_HAND"
+        }), 200
+
     except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    """
+    Chat endpoint using Gemini.
+    Expects JSON: { "message": "User question..." }
+    """
+    if not CHAT_LOADED:
+        return jsonify({"success": False, "error": "Chat system not authorized (Key missing?)"}), 503
+
+    try:
+        data = request.get_json()
+        user_message = data.get('message', '')
+        
+        if not user_message:
+            return jsonify({"success": False, "error": "Empty message"}), 400
+
+        # System Prompt Injection
+        system_prompt = (
+            "You are 'Natya Guru', a wise and encouraging Bharatanatyam teacher. "
+            "You help students understand Mudras (hand gestures), their mythology, uses (Viniyoga), and spiritual significance. "
+            "Keep answers concise, educational, and use a warm, mentorship tone. "
+            "If asked about app navigation, guide them gently. "
+            "Dont give table formatted responses"
+            f"User asks: {user_message}"
+        )
+
+        response = chat_model.generate_content(system_prompt)
+        bot_reply = response.text
+
+        return jsonify({
+            "success": True,
+            "reply": bot_reply
+        })
+
+    except Exception as e:
+        print(f"Chat Error: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 

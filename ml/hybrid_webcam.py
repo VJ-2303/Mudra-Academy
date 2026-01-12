@@ -51,6 +51,7 @@ import numpy as np
 import mediapipe as mp
 import joblib
 import math
+import os
 from types import SimpleNamespace
 
 # ============================================================
@@ -221,11 +222,14 @@ STABILITY_DISTANCE_THRESHOLD = 0.02  # Maximum movement allowed for "steady" han
 # LOAD MACHINE LEARNING MODEL
 # ============================================================
 try:
-    model = joblib.load("mudra_rf_model.pkl")
+    model_path = os.path.join(os.path.dirname(__file__), "mudra_rf_model.pkl")
+    model = joblib.load(model_path)
     model_classes = model.classes_
     print(f"✓ ML Model loaded with {len(model_classes)} classes")
 except Exception as e:
     print(f"✗ Failed to load ML model: {e}")
+    # Don't exit here if imported by api_server (let api_server handle it or crash later)
+    # But for now, exit(1) is fine as api_server imports it at top level
     exit(1)
 
 # ============================================================
