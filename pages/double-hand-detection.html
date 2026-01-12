@@ -12,6 +12,9 @@
     <link rel="stylesheet" href="../css/styles.css">
     <link rel="stylesheet" href="../css/pages.css">
 
+    <!-- ONNX Runtime Web for ML inference -->
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.0/dist/ort.min.js"></script>
+
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%238B2942' width='100' height='100' rx='20'/%3E%3Ctext x='50' y='65' font-size='50' text-anchor='middle' fill='%23D4A84B' font-family='serif'%3EM%3C/text%3E%3C/svg%3E">
 
     <style>
@@ -36,6 +39,15 @@
             transform: scaleX(-1);
         }
         #canvas { display: none; }
+        #overlayCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            transform: scaleX(-1);
+        }
         .video-placeholder {
             position: absolute;
             inset: 0;
@@ -80,6 +92,33 @@
             font-size: 0.75rem;
             font-weight: 600;
         }
+        .loading-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-light);
+            z-index: 100;
+        }
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--color-gray);
+            border-top-color: var(--color-secondary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: var(--spacing-md);
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .loading-text {
+            font-size: 1rem;
+            color: var(--color-secondary);
+        }
         .controls {
             display: flex;
             gap: var(--spacing-md);
@@ -110,6 +149,10 @@
         .btn-start:hover {
             background: var(--color-primary-dark);
             box-shadow: var(--shadow-primary);
+        }
+        .btn-start:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
         .btn-stop {
             background: #ef4444;
@@ -148,6 +191,18 @@
             height: 18px;
             color: var(--color-secondary);
         }
+        .api-status {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-sm) var(--spacing-md);
+            background: var(--color-light-warm);
+            border-radius: var(--radius-md);
+            font-size: 0.85rem;
+        }
+        .api-status.connected { background: #dcfce7; color: #166534; }
+        .api-status.loading { background: #fef3c7; color: #92400e; }
+        .api-status.error { background: #fee2e2; color: #991b1b; }
         .current-mudra-display {
             text-align: center;
             padding: var(--spacing-md) 0;
@@ -217,20 +272,6 @@
             padding: var(--spacing-lg) 0;
             font-size: 0.9rem;
         }
-        .supported-mudras {
-            display: flex;
-            flex-wrap: wrap;
-            gap: var(--spacing-xs);
-            margin-top: var(--spacing-sm);
-        }
-        .mudra-tag {
-            background: var(--color-light-warm);
-            color: var(--color-primary);
-            padding: var(--spacing-xs) var(--spacing-sm);
-            border-radius: var(--radius-sm);
-            font-size: 0.75rem;
-            font-weight: 500;
-        }
         @media (max-width: 900px) {
             .detection-layout {
                 grid-template-columns: 1fr;
@@ -250,17 +291,14 @@
                 </div>
                 <span class="logo-text">Mudra Academy</span>
             </a>
-
             <ul class="nav-links">
                 <li><a href="../index.html#features">Features</a></li>
                 <li><a href="../index.html#games">Games</a></li>
-                <li><a href="library.html" class="active">Library</a></li>
+                <li><a href="library.html">Library</a></li>
             </ul>
-
             <div class="nav-cta">
-                <a href="detection-mode.html" class="btn btn-primary">live Detection</a>
+                <a href="detection-mode.html" class="btn btn-primary">Live Detection</a>
             </div>
-
             <button class="mobile-menu-btn" aria-label="Toggle menu">
                 <span></span>
                 <span></span>
@@ -276,6 +314,8 @@
                     <div class="video-container">
                         <video id="webcam" autoplay playsinline></video>
                         <canvas id="canvas"></canvas>
+                        <canvas id="overlayCanvas"></canvas>
+                        <div class="mode-badge">Double Hand Mode</div>
                         <div class="video-placeholder" id="placeholder">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                                 <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
@@ -284,11 +324,14 @@
                             <h3>Camera Ready</h3>
                             <p>Click Start to begin double-hand detection</p>
                         </div>
-                        <div class="mode-badge">Double Hand Mode</div>
+                        <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+                            <div class="loading-spinner"></div>
+                            <div class="loading-text" id="loadingText">Loading YOLO model...</div>
+                        </div>
                         <div class="mudra-label" id="mudraName" style="display:none;">--</div>
                     </div>
                     <div class="controls">
-                        <button class="control-btn btn-start" id="startBtn">
+                        <button class="control-btn btn-start" id="startBtn" disabled>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polygon points="5 3 19 12 5 21 5 3"/>
                             </svg>
@@ -310,6 +353,18 @@
                     </div>
                 </div>
                 <aside>
+                    <div class="sidebar-card">
+                        <h3>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                                <polyline points="22 4 12 14.01 9 11.01"/>
+                            </svg>
+                            System Status
+                        </h3>
+                        <div class="api-status loading" id="statusIndicator">
+                            <span>●</span> Loading YOLO model...
+                        </div>
+                    </div>
                     <div class="sidebar-card">
                         <h3>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -355,27 +410,6 @@
                             <div class="empty-state">No mudras detected yet</div>
                         </div>
                     </div>
-                    <div class="sidebar-card">
-                        <h3>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                                <polyline points="14 2 14 8 20 8"/>
-                                <line x1="16" y1="13" x2="8" y2="13"/>
-                                <line x1="16" y1="17" x2="8" y2="17"/>
-                            </svg>
-                            Supported Mudras
-                        </h3>
-                        <div class="supported-mudras">
-                            <span class="mudra-tag">Anjali</span>
-                            <span class="mudra-tag">Naagabandha</span>
-                            <span class="mudra-tag">Chakra</span>
-                            <span class="mudra-tag">Karkota</span>
-                            <span class="mudra-tag">Katariswastika</span>
-                            <span class="mudra-tag">Pasha</span>
-                            <span class="mudra-tag">Shanka</span>
-                            <span class="mudra-tag">Shivalinga</span>
-                        </div>
-                    </div>
                 </aside>
             </div>
         </div>
@@ -399,141 +433,362 @@
     </footer>
 
     <script src="../js/main.js"></script>
+    
     <script>
     (function() {
-        var API = 'http://localhost:5000';
-        var INTERVAL = 200;
-        var running = false;
-        var video, canvas, ctx, timer, sessionTimer, startTime;
-        var uniqueMap = {}, lastMudra = null, lastTime = 0;
-
-        // Double-hand mudra meanings (matching trained model class names)
-        var meanings = {
-            'Anjali': 'Salutation - Palms joined in prayer position',
+        'use strict';
+        
+        // YOLO Configuration
+        const MODEL_PATH = '../ml/models/kkpv_web.onnx';
+        // Class names MUST match the model training order
+        const YOLO_CLASSES = ['Anjali', 'Naagabandha', 'Chakra', 'Karkota', 'Kartariswastika', 'Pasha', 'Shanka', 'Shivalinga'];
+        const CONF_THRESHOLD = 0.25;
+        const DETECT_INTERVAL = 150; // ~6-7 FPS for YOLO (heavier model)
+        
+        // Double-hand mudra meanings
+        const meanings = {
+            'Anjali': 'Salutation - Prayer, greeting, respect',
             'Naagabandha': 'Serpent bond - Intertwined snakes',
-            'Chakra': 'Disc/Wheel - Vishnu\'s divine weapon',
-            'Karkota': 'Crab - Interlocked fingers showing strength',
-            'Katariswastika': 'Scissor cross - Separation, difference',
-            'Pasha': 'Noose - Rope or binding',
-            'Shanka': 'Conch shell - Sacred symbol',
-            'Shivalinga': 'Shiva\'s symbol - Sacred emblem of Lord Shiva'
+            'Chakra': 'Wheel/Disc - Vishnu\'s weapon',
+            'Karkota': 'Crab - Pincer movement',
+            'Kartariswastika': 'Crossed scissors - Auspicious cross',
+            'Pasha': 'Noose - Binding, rope',
+            'Shanka': 'Conch shell - Sacred shell',
+            'Shivalinga': 'Shiva symbol - Divine representation'
         };
+        
+        // State
+        let running = false;
+        let modelLoaded = false;
+        let yoloSession = null;
+        let video, canvas, ctx, overlayCanvas, overlayCtx;
+        let sessionTimer, startTime;
+        let uniqueMap = {}, lastMudra = null;
+        let lastDetectTime = 0;
 
-        var $ = function(id) { return document.getElementById(id); };
+        const $ = (id) => document.getElementById(id);
 
-        function checkAPI() {
-            fetch(API + '/health').then(function(r) { return r.json(); })
-            .then(function(data) {
-                if (!data.double_hand_model) {
-                    console.warn('Double-hand model not loaded on server');
+        // Initialize YOLO model
+        async function initializeModel() {
+            const loadingOverlay = $('loadingOverlay');
+            const loadingText = $('loadingText');
+            const statusIndicator = $('statusIndicator');
+            const startBtn = $('startBtn');
+            
+            loadingOverlay.style.display = 'flex';
+            
+            try {
+                loadingText.textContent = 'Loading YOLOv8 model (~12MB)...';
+                
+                // Configure ONNX Runtime for single-threaded operation (avoids COOP/COEP issues)
+                if (typeof ort !== 'undefined') {
+                    ort.env.wasm.numThreads = 1;
                 }
-            }).catch(function() {
-                console.error('API server not available');
-            });
+                
+                console.log('Loading model from:', MODEL_PATH);
+                yoloSession = await ort.InferenceSession.create(MODEL_PATH, {
+                    executionProviders: ['wasm', 'cpu'],
+                    graphOptimizationLevel: 'all'
+                });
+                
+                modelLoaded = true;
+                statusIndicator.className = 'api-status connected';
+                statusIndicator.innerHTML = '<span>●</span> YOLO model loaded (Offline)';
+                startBtn.disabled = false;
+                
+                console.log('✅ YOLO model loaded successfully');
+                console.log('Input names:', yoloSession.inputNames);
+                console.log('Output names:', yoloSession.outputNames);
+                
+            } catch (error) {
+                console.error('Model loading error:', error);
+                statusIndicator.className = 'api-status error';
+                statusIndicator.innerHTML = '<span>●</span> Error loading model';
+            } finally {
+                loadingOverlay.style.display = 'none';
+            }
+        }
+
+        // Preprocess image for YOLO
+        function preprocessImage(video) {
+            // Draw video frame to canvas
+            ctx.drawImage(video, 0, 0, 640, 640);
+            const imageData = ctx.getImageData(0, 0, 640, 640);
+            const data = imageData.data;
+            
+            // Convert to CHW format and normalize [0, 1]
+            const tensor = new Float32Array(3 * 640 * 640);
+            let idx = 0;
+            
+            // Red channel
+            for (let i = 0; i < 640 * 640; i++) {
+                tensor[idx++] = data[i * 4] / 255.0;
+            }
+            // Green channel
+            for (let i = 0; i < 640 * 640; i++) {
+                tensor[idx++] = data[i * 4 + 1] / 255.0;
+            }
+            // Blue channel
+            for (let i = 0; i < 640 * 640; i++) {
+                tensor[idx++] = data[i * 4 + 2] / 255.0;
+            }
+            
+            return tensor;
+        }
+
+        // Run YOLO inference
+        async function runYOLO() {
+            if (!yoloSession || !running) return null;
+            
+            try {
+                // Preprocess
+                const inputTensor = preprocessImage(video);
+                const tensor = new ort.Tensor('float32', inputTensor, [1, 3, 640, 640]);
+                
+                // Run inference
+                const feeds = { images: tensor };
+                const results = await yoloSession.run(feeds);
+                
+                // Get output (shape: [1, 12, 8400] for 8 classes + 4 box coords)
+                const output = results[yoloSession.outputNames[0]];
+                const outputData = output.data;
+                const numDetections = 8400;
+                const numClasses = 8;
+                
+                // Find best detection
+                let bestScore = 0;
+                let bestClass = -1;
+                let bestBox = null;
+                
+                for (let i = 0; i < numDetections; i++) {
+                    // Box coords: [x, y, w, h] at indices 0-3
+                    const x = outputData[0 * numDetections + i];
+                    const y = outputData[1 * numDetections + i];
+                    const w = outputData[2 * numDetections + i];
+                    const h = outputData[3 * numDetections + i];
+                    
+                    // Class scores at indices 4-11
+                    let maxClassScore = 0;
+                    let maxClassIdx = 0;
+                    
+                    for (let c = 0; c < numClasses; c++) {
+                        const score = outputData[(4 + c) * numDetections + i];
+                        if (score > maxClassScore) {
+                            maxClassScore = score;
+                            maxClassIdx = c;
+                        }
+                    }
+                    
+                    if (maxClassScore > bestScore) {
+                        bestScore = maxClassScore;
+                        bestClass = maxClassIdx;
+                        bestBox = { x, y, w, h };
+                    }
+                }
+                
+                // Apply confidence threshold
+                if (bestScore >= CONF_THRESHOLD && bestClass >= 0) {
+                    return {
+                        className: YOLO_CLASSES[bestClass],
+                        confidence: bestScore,
+                        box: bestBox
+                    };
+                }
+                
+                return null;
+                
+            } catch (error) {
+                console.error('YOLO inference error:', error);
+                return null;
+            }
+        }
+
+        // Draw detection overlay
+        function drawOverlay(detection) {
+            const ow = overlayCanvas.width;
+            const oh = overlayCanvas.height;
+            
+            overlayCtx.clearRect(0, 0, ow, oh);
+            
+            if (!detection || !detection.box) return;
+            
+            // Scale box coordinates to overlay canvas
+            const scaleX = ow / 640;
+            const scaleY = oh / 640;
+            
+            const x = detection.box.x * scaleX;
+            const y = detection.box.y * scaleY;
+            const w = detection.box.w * scaleX;
+            const h = detection.box.h * scaleY;
+            
+            // Convert center-width-height to top-left corner
+            const x1 = x - w / 2;
+            const y1 = y - h / 2;
+            
+            // Draw bounding box
+            overlayCtx.strokeStyle = '#D4A84B';
+            overlayCtx.lineWidth = 3;
+            overlayCtx.strokeRect(x1, y1, w, h);
+            
+            // Draw label background
+            const label = `${detection.className} ${(detection.confidence * 100).toFixed(0)}%`;
+            overlayCtx.font = 'bold 16px Inter, sans-serif';
+            const textWidth = overlayCtx.measureText(label).width;
+            
+            overlayCtx.fillStyle = '#D4A84B';
+            overlayCtx.fillRect(x1, y1 - 24, textWidth + 16, 24);
+            
+            // Draw label text
+            overlayCtx.fillStyle = '#1a1a2e';
+            overlayCtx.fillText(label, x1 + 8, y1 - 6);
+        }
+
+        // Detection loop
+        async function detectLoop() {
+            if (!running || !modelLoaded) return;
+            
+            const now = Date.now();
+            if (now - lastDetectTime >= DETECT_INTERVAL) {
+                lastDetectTime = now;
+                
+                const detection = await runYOLO();
+                
+                if (detection) {
+                    show(detection.className, detection.confidence);
+                    drawOverlay(detection);
+                } else {
+                    show(null, 0);
+                    overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+                }
+            }
+            
+            if (running) {
+                requestAnimationFrame(detectLoop);
+            }
+        }
+
+        function show(name, conf) {
+            const label = $('mudraName');
+            const currentName = $('currentName');
+            const currentMeaning = $('currentMeaning');
+
+            if (!name) {
+                label.textContent = 'Detecting...';
+                label.style.color = '#fff';
+                currentName.textContent = '--';
+                currentMeaning.textContent = 'Waiting for detection';
+                return;
+            }
+
+            const confText = conf > 0 ? ` (${(conf * 100).toFixed(0)}%)` : '';
+
+            label.textContent = name + confText;
+            label.style.color = '#D4A84B';
+
+            currentName.textContent = name;
+            currentMeaning.textContent = meanings[name] || 'Traditional double-hand mudra';
+
+            if (name !== lastMudra) {
+                lastMudra = name;
+                if (!uniqueMap[name]) {
+                    uniqueMap[name] = true;
+                    $('uniqueCount').textContent = Object.keys(uniqueMap).length;
+                }
+                addHistory(name, conf);
+            }
+        }
+
+        function addHistory(name, conf) {
+            const list = $('historyList');
+            const empty = list.querySelector('.empty-state');
+            if (empty) empty.remove();
+
+            const abbr = name.substring(0, 2).toUpperCase();
+            const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            item.innerHTML = `
+                <div class="history-abbr">${abbr}</div>
+                <div class="history-info">
+                    <div class="history-name">${name}</div>
+                    <div class="history-time">${timeStr} · YOLO</div>
+                </div>
+                <div class="history-conf">${conf > 0 ? (conf * 100).toFixed(0) + '%' : '--'}</div>
+            `;
+
+            list.insertBefore(item, list.firstChild);
+        }
+
+        function updateTime() {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const mins = Math.floor(elapsed / 60);
+            const secs = elapsed % 60;
+            $('duration').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
         }
 
         function start() {
-            navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } })
-            .then(function(stream) {
-                video = $('webcam');
-                video.srcObject = stream;
-                canvas = $('canvas');
-                ctx = canvas.getContext('2d');
-                canvas.width = 640;
-                canvas.height = 480;
+            if (!modelLoaded) {
+                alert('YOLO model is still loading. Please wait.');
+                return;
+            }
 
+            video = $('webcam');
+            canvas = $('canvas');
+            ctx = canvas.getContext('2d');
+            canvas.width = 640;
+            canvas.height = 640;
+
+            overlayCanvas = $('overlayCanvas');
+            overlayCtx = overlayCanvas.getContext('2d');
+            const container = overlayCanvas.parentElement;
+            overlayCanvas.width = container.offsetWidth;
+            overlayCanvas.height = container.offsetHeight;
+
+            navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    width: { ideal: 640 },
+                    height: { ideal: 480 }
+                } 
+            })
+            .then((stream) => {
+                video.srcObject = stream;
+                video.play();
+                
                 $('placeholder').style.display = 'none';
                 $('startBtn').style.display = 'none';
                 $('stopBtn').style.display = 'inline-flex';
                 $('mudraName').style.display = 'block';
+                
                 running = true;
                 startTime = Date.now();
                 sessionTimer = setInterval(updateTime, 1000);
-                timer = setInterval(detect, INTERVAL);
-            }).catch(function(err) {
+                
+                // Start detection loop
+                requestAnimationFrame(detectLoop);
+            })
+            .catch((err) => {
                 console.error('Camera error:', err);
-                alert('Could not access camera. Please allow camera permissions.');
+                alert('Could not access camera. Please ensure camera permissions are granted.');
             });
         }
 
         function stop() {
             running = false;
-            clearInterval(timer);
             clearInterval(sessionTimer);
+
             if (video && video.srcObject) {
-                video.srcObject.getTracks().forEach(function(t) { t.stop(); });
+                video.srcObject.getTracks().forEach(track => track.stop());
             }
+
             $('placeholder').style.display = 'flex';
             $('startBtn').style.display = 'inline-flex';
             $('stopBtn').style.display = 'none';
             $('mudraName').style.display = 'none';
-        }
 
-        function detect() {
-            if (!running) return;
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            var data = canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
-
-            fetch(API + '/detect-double', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ image: data })
-            }).then(function(r) { return r.json(); })
-            .then(function(res) {
-                if (res.success && res.mudra && res.mudra !== 'Unknown') {
-                    show(res.mudra, res.confidence || 0, res.meaning || '');
-                } else {
-                    show('Unknown', 0, '');
-                }
-            }).catch(function(err) {
-                console.error('Detection error:', err);
-            });
-        }
-
-        function show(mudra, conf, meaning) {
-            $('mudraName').textContent = mudra;
-            $('currentName').textContent = mudra;
-            $('currentMeaning').textContent = meaning || meanings[mudra] || '';
-
-            var now = Date.now();
-            if (mudra !== 'Unknown' && conf >= 0.5 && (mudra !== lastMudra || now - lastTime > 1000)) {
-                addHistory(mudra, conf);
-                lastMudra = mudra;
-                lastTime = now;
+            if (overlayCtx) {
+                overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
             }
-        }
-
-        function addHistory(mudra, conf) {
-            if (!uniqueMap[mudra]) {
-                uniqueMap[mudra] = { mudra: mudra, conf: conf };
-                $('uniqueCount').textContent = Object.keys(uniqueMap).length;
-                renderHistory();
-            }
-        }
-
-        function renderHistory() {
-            var mudras = Object.values(uniqueMap);
-            if (!mudras.length) {
-                $('historyList').innerHTML = '<div class="empty-state">No mudras detected yet</div>';
-                return;
-            }
-            var html = '';
-            for (var i = 0; i < mudras.length; i++) {
-                var h = mudras[i];
-                html += '<div class="history-item">';
-                html += '<div class="history-abbr">' + h.mudra.substring(0, 2) + '</div>';
-                html += '<div class="history-info"><div class="history-name">' + h.mudra + '</div>';
-                html += '<div class="history-time">' + (meanings[h.mudra] || '') + '</div></div>';
-                html += '</div>';
-            }
-            $('historyList').innerHTML = html;
-        }
-
-        function updateTime() {
-            var s = Math.floor((Date.now() - startTime) / 1000);
-            var m = Math.floor(s / 60);
-            s = s % 60;
-            $('duration').textContent = m + ':' + (s < 10 ? '0' : '') + s;
         }
 
         function reset() {
@@ -542,19 +797,22 @@
             lastMudra = null;
             $('uniqueCount').textContent = '0';
             $('duration').textContent = '0:00';
+            $('historyList').innerHTML = '<div class="empty-state">No mudras detected yet</div>';
             $('currentName').textContent = '--';
             $('currentMeaning').textContent = 'Waiting for detection';
-            $('mudraName').textContent = '--';
-            renderHistory();
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            checkAPI();
-            $('startBtn').addEventListener('click', start);
-            $('stopBtn').addEventListener('click', stop);
-            $('resetBtn').addEventListener('click', reset);
-        });
+        // Event listeners
+        $('startBtn').addEventListener('click', start);
+        $('stopBtn').addEventListener('click', stop);
+        $('resetBtn').addEventListener('click', reset);
+
+        // Initialize on page load
+        window.addEventListener('load', initializeModel);
     })();
     </script>
+    
+    <!-- Chatbot Widget -->
+    <script src="../js/chat-widget.js"></script>
 </body>
 </html>

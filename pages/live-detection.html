@@ -15,6 +15,9 @@
     <!-- MediaPipe Hands for client-side landmark detection -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.min.js" crossorigin="anonymous"></script>
+    
+    <!-- ONNX Runtime Web for ML inference -->
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.0/dist/ort.min.js"></script>
 
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%238B2942' width='100' height='100' rx='20'/%3E%3Ctext x='50' y='65' font-size='50' text-anchor='middle' fill='%23D4A84B' font-family='serif'%3EM%3C/text%3E%3C/svg%3E">
 
@@ -82,6 +85,33 @@
             color: var(--color-light);
             text-shadow: 0 2px 8px rgba(0,0,0,0.8);
         }
+        .loading-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--color-light);
+            z-index: 100;
+        }
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--color-gray);
+            border-top-color: var(--color-secondary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: var(--spacing-md);
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .loading-text {
+            font-size: 1rem;
+            color: var(--color-secondary);
+        }
         .controls {
             display: flex;
             gap: var(--spacing-md);
@@ -112,6 +142,10 @@
         .btn-start:hover {
             background: var(--color-primary-dark);
             box-shadow: var(--shadow-primary);
+        }
+        .btn-start:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
         .btn-stop {
             background: #ef4444;
@@ -160,6 +194,7 @@
             font-size: 0.85rem;
         }
         .api-status.connected { background: #dcfce7; color: #166534; }
+        .api-status.loading { background: #fef3c7; color: #92400e; }
         .api-status.error { background: #fee2e2; color: #991b1b; }
         .current-mudra-display {
             text-align: center;
@@ -281,10 +316,14 @@
                             <h3>Camera Ready</h3>
                             <p>Click Start to begin detection</p>
                         </div>
+                        <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+                            <div class="loading-spinner"></div>
+                            <div class="loading-text" id="loadingText">Loading models...</div>
+                        </div>
                         <div class="mudra-label" id="mudraName" style="display:none;">--</div>
                     </div>
                     <div class="controls">
-                        <button class="control-btn btn-start" id="startBtn">
+                        <button class="control-btn btn-start" id="startBtn" disabled>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <polygon points="5 3 19 12 5 21 5 3"/>
                             </svg>
@@ -306,6 +345,18 @@
                     </div>
                 </div>
                 <aside>
+                    <div class="sidebar-card">
+                        <h3>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                                <polyline points="22 4 12 14.01 9 11.01"/>
+                            </svg>
+                            System Status
+                        </h3>
+                        <div class="api-status loading" id="statusIndicator">
+                            <span>●</span> Loading models...
+                        </div>
+                    </div>
                     <div class="sidebar-card">
                         <h3>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -374,100 +425,180 @@
     </footer>
 
     <script src="../js/main.js"></script>
+    <!-- Load inference modules -->
+    <script src="../js/mudra-inference.js"></script>
+    <script src="../js/mudra-detection.js"></script>
+    
     <script>
     (function() {
-        var API = 'http://localhost:5000';
-        var DETECT_INTERVAL = 100; // SPEED FIX: ~10 FPS for faster response (was 250ms)
-        var running = false;
-        var video, canvas, ctx, landmarkCanvas, landmarkCtx, sessionTimer, startTime;
-        var hands, camera;
-        var uniqueMap = {}, lastMudra = null, lastTime = 0;
-        var lastDetectTime = 0;
-        var currentLandmarks = null;
+        'use strict';
         
-        // Unique session ID for FSM state tracking
-        var SESSION_ID = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        // Configuration
+        const DETECT_INTERVAL = 100; // ~10 FPS for faster response
+        
+        // State
+        let running = false;
+        let modelsLoaded = false;
+        let video, canvas, ctx, landmarkCanvas, landmarkCtx;
+        let hands, camera;
+        let sessionTimer, startTime;
+        let uniqueMap = {}, lastMudra = null;
+        let lastDetectTime = 0;
+        let currentLandmarks = null;
+        let prevLandmarks = null;
+        let mudraFSM = null;
 
-        // Hand landmark connections (MediaPipe hand model)
-        var HAND_CONNECTIONS = [
-            [0, 1], [1, 2], [2, 3], [3, 4],       // Thumb
-            [0, 5], [5, 6], [6, 7], [7, 8],       // Index
-            [0, 9], [9, 10], [10, 11], [11, 12], // Middle
-            [0, 13], [13, 14], [14, 15], [15, 16], // Ring
-            [0, 17], [17, 18], [18, 19], [19, 20], // Pinky
-            [5, 9], [9, 13], [13, 17]              // Palm
+        // Hand landmark connections
+        const HAND_CONNECTIONS = [
+            [0, 1], [1, 2], [2, 3], [3, 4],
+            [0, 5], [5, 6], [6, 7], [7, 8],
+            [0, 9], [9, 10], [10, 11], [11, 12],
+            [0, 13], [13, 14], [14, 15], [15, 16],
+            [0, 17], [17, 18], [18, 19], [19, 20],
+            [5, 9], [9, 13], [13, 17]
         ];
 
-        var meanings = {
+        // Mudra meanings
+        const meanings = {
             'Pataka': 'Flag - Beginning, clouds',
+            'Pataka Mudra': 'Flag - Beginning, clouds',
             'Tripataka': 'Three-part flag - Crown',
+            'Tripataka Mudra': 'Three-part flag - Crown',
+            'Tripathaka': 'Three-part flag - Crown',
             'Ardhapataka': 'Half flag - Leaves',
+            'Ardhapataka Mudra': 'Half flag - Leaves',
+            'Ardhapathaka': 'Half flag - Leaves',
             'Kartarimukha': 'Scissors - Separation',
+            'Kartari Mukham Mudra': 'Scissors - Separation',
+            'Katrimukha': 'Scissors - Separation',
             'Mayura': 'Peacock',
+            'Mayura Mudra': 'Peacock',
             'Ardhachandra': 'Half moon',
+            'Ardhachandran': 'Half moon',
             'Arala': 'Bent',
+            'Arala Mudra': 'Bent',
+            'Aralam': 'Bent',
             'Shukatunda': 'Parrot beak',
+            'Shuka Tundam Mudra': 'Parrot beak',
+            'Shukatundam': 'Parrot beak',
             'Musti': 'Fist',
+            'Musthi Mudra': 'Fist',
+            'Mushti': 'Fist',
             'Shikhara': 'Peak',
+            'Shikharam Mudra': 'Peak',
+            'Sikharam': 'Peak',
             'Kapittha': 'Elephant apple',
+            'Kapith': 'Elephant apple',
             'Katakamukha': 'Bracelet opening',
+            'Katakamukha_1': 'Bracelet opening',
             'Suchi': 'Needle',
+            'Suchi Mudra': 'Needle',
             'Chandrakala': 'Moon digit',
             'Padmakosha': 'Lotus bud',
             'Sarpashirsha': 'Snake hood',
+            'Sarpashirsha Mudra': 'Snake hood',
+            'Sarpasirsha': 'Snake hood',
             'Mrigashirsha': 'Deer head',
+            'Mrigasheersha Mudra': 'Deer head',
+            'Mrigasirsha': 'Deer head',
             'Simhamukha': 'Lion face',
+            'Simhamukha Mudra': 'Lion face',
+            'Simhamukham': 'Lion face',
             'Kangula': 'Bell',
+            'Kangulam': 'Bell',
             'Alapadma': 'Bloomed lotus',
+            'Alapadmam': 'Bloomed lotus',
             'Chatura': 'Square',
+            'Chatura Mudra': 'Square',
+            'Chaturam': 'Square',
             'Bhramara': 'Bee',
+            'Bramaram': 'Bee',
             'Hamsasya': 'Swan beak',
+            'Hamsasya Mudra': 'Swan beak',
+            'Hamsasyam': 'Swan beak',
             'Hamsapaksha': 'Swan wing',
             'Samdamsha': 'Pincers',
-            'Mukula': 'Bud'
+            'Mukula': 'Bud',
+            'Mukulam': 'Bud',
+            'Trishula': 'Trident',
+            'Trishula Mudra': 'Trident',
+            'Trishulam': 'Trident',
+            'Tamarachudam': 'Lotus petal'
         };
 
-        var $ = function(id) { return document.getElementById(id); };
+        const $ = (id) => document.getElementById(id);
 
-        function checkAPI() {
-            fetch(API + '/health').catch(function() {});
+        // Initialize ONNX models
+        async function initializeModels() {
+            const loadingOverlay = $('loadingOverlay');
+            const loadingText = $('loadingText');
+            const statusIndicator = $('statusIndicator');
+            const startBtn = $('startBtn');
+            
+            loadingOverlay.style.display = 'flex';
+            
+            try {
+                loadingText.textContent = 'Loading Random Forest model (~60MB)...';
+                
+                // Initialize only RF model (not YOLO - that's for double-hand)
+                const success = await window.MudraInference.initialize({ loadYolo: false, loadRF: true });
+                
+                if (success) {
+                    modelsLoaded = true;
+                    statusIndicator.className = 'api-status connected';
+                    statusIndicator.innerHTML = '<span>●</span> Models loaded (Offline)';
+                    startBtn.disabled = false;
+                    
+                    // Initialize FSM
+                    mudraFSM = new window.MudraDetection.MudraFSM();
+                    
+                    console.log('✅ All models loaded successfully');
+                } else {
+                    throw new Error('Failed to load models');
+                }
+            } catch (error) {
+                console.error('Model loading error:', error);
+                statusIndicator.className = 'api-status error';
+                statusIndicator.innerHTML = '<span>●</span> Error loading models';
+            } finally {
+                loadingOverlay.style.display = 'none';
+            }
         }
 
-        // Draw landmarks on canvas (called every frame by MediaPipe)
+        // Draw landmarks on canvas
         function drawLandmarks(landmarks) {
             if (!landmarkCtx) return;
 
-            var w = landmarkCanvas.width;
-            var h = landmarkCanvas.height;
+            const w = landmarkCanvas.width;
+            const h = landmarkCanvas.height;
 
-            // Clear previous frame
             landmarkCtx.clearRect(0, 0, w, h);
 
             if (!landmarks || landmarks.length < 21) return;
 
-            // Draw connections first (lines between landmarks)
+            // Draw connections
             landmarkCtx.strokeStyle = 'rgba(212, 168, 75, 0.8)';
             landmarkCtx.lineWidth = 3;
             landmarkCtx.lineCap = 'round';
 
-            HAND_CONNECTIONS.forEach(function(conn) {
-                var start = landmarks[conn[0]];
-                var end = landmarks[conn[1]];
-                if (start && end) {
+            HAND_CONNECTIONS.forEach(([start, end]) => {
+                const startLm = landmarks[start];
+                const endLm = landmarks[end];
+                if (startLm && endLm) {
                     landmarkCtx.beginPath();
-                    landmarkCtx.moveTo(start.x * w, start.y * h);
-                    landmarkCtx.lineTo(end.x * w, end.y * h);
+                    landmarkCtx.moveTo(startLm.x * w, startLm.y * h);
+                    landmarkCtx.lineTo(endLm.x * w, endLm.y * h);
                     landmarkCtx.stroke();
                 }
             });
 
             // Draw landmark points
-            landmarks.forEach(function(lm, index) {
-                var x = lm.x * w;
-                var y = lm.y * h;
+            landmarks.forEach((lm, index) => {
+                const x = lm.x * w;
+                const y = lm.y * h;
 
                 if (index === 0) {
-                    // Wrist - larger, primary color
+                    // Wrist
                     landmarkCtx.fillStyle = '#8B2942';
                     landmarkCtx.beginPath();
                     landmarkCtx.arc(x, y, 4, 0, Math.PI * 2);
@@ -475,8 +606,8 @@
                     landmarkCtx.strokeStyle = '#fff';
                     landmarkCtx.lineWidth = 2;
                     landmarkCtx.stroke();
-                } else if ([4, 8, 12, 16, 20].indexOf(index) !== -1) {
-                    // Fingertips - gold with white border
+                } else if ([4, 8, 12, 16, 20].includes(index)) {
+                    // Fingertips
                     landmarkCtx.fillStyle = '#D4A84B';
                     landmarkCtx.beginPath();
                     landmarkCtx.arc(x, y, 4, 0, Math.PI * 2);
@@ -485,7 +616,7 @@
                     landmarkCtx.lineWidth = 2;
                     landmarkCtx.stroke();
                 } else {
-                    // Other joints - white
+                    // Other joints
                     landmarkCtx.fillStyle = '#fff';
                     landmarkCtx.beginPath();
                     landmarkCtx.arc(x, y, 4, 0, Math.PI * 2);
@@ -494,7 +625,7 @@
             });
         }
 
-        // MediaPipe results callback - runs at high framerate
+        // MediaPipe results callback
         function onResults(results) {
             if (!running) return;
 
@@ -508,72 +639,157 @@
                 }
             }
 
-            // Send to API for mudra classification (throttled)
-            var now = Date.now();
+            // Run detection (throttled)
+            const now = Date.now();
             if (now - lastDetectTime >= DETECT_INTERVAL) {
                 lastDetectTime = now;
                 detectMudra();
             }
         }
 
-        // Send frame to API for mudra classification
-        function detectMudra() {
-            if (!running || !video) return;
+        // Main detection function (pure JS, no server)
+        async function detectMudra() {
+            if (!running || !modelsLoaded || !mudraFSM) return;
 
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            var data = canvas.toDataURL('image/jpeg', 0.75).split(',')[1]; // Better quality
+            let candidateName = null;
+            let candidateConf = 0;
+            let candidateMethod = null;
 
-            fetch(API + '/detect', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    image: data,
-                    session_id: SESSION_ID  // Include session ID for FSM state
-                })
-            }).then(function(r) { return r.json(); })
-            .then(function(res) {
-                if (res.success && res.mudra && res.mudra !== 'Unknown') {
-                    show(res.mudra, res.confidence || 0, res.method || '');
-                } else {
-                    show('Unknown', 0, '');
+            if (currentLandmarks && currentLandmarks.length >= 21) {
+                // Run hybrid detection (rules + ML)
+                const result = await window.MudraDetection.detectMudraHybrid(
+                    currentLandmarks, 
+                    "Right", 
+                    prevLandmarks
+                );
+
+                if (result.mudraName && !["Unknown", "Stabilizing..."].includes(result.mudraName)) {
+                    candidateName = result.mudraName;
+                    candidateConf = result.confidence;
+                    candidateMethod = result.method;
                 }
-            }).catch(function() {});
+
+                // Store for stability check
+                prevLandmarks = currentLandmarks.map(lm => ({
+                    x: lm.x, y: lm.y, z: lm.z || 0
+                }));
+            }
+
+            // Update FSM
+            const fsmResult = mudraFSM.update(
+                !!currentLandmarks,
+                candidateName,
+                candidateConf,
+                candidateMethod
+            );
+
+            // Update display
+            show(fsmResult.displayName, fsmResult.displayConf, fsmResult.displayMethod);
+        }
+
+        function show(name, conf, method) {
+            const label = $('mudraName');
+            const currentName = $('currentName');
+            const currentMeaning = $('currentMeaning');
+
+            // Skip interim states
+            if (!name || ['Unknown', 'Stabilizing...', 'Detecting...', 'Show mudra...', 'No hand detected'].includes(name)) {
+                label.textContent = name || '--';
+                label.style.color = '#fff';
+                currentName.textContent = '--';
+                currentMeaning.textContent = 'Waiting for detection';
+                return;
+            }
+
+            // Display detected mudra
+            const displayName = name.replace(' Mudra', '');
+            const confText = conf > 0 ? ` (${(conf * 100).toFixed(0)}%)` : '';
+            const methodText = method ? ` [${method}]` : '';
+
+            label.textContent = displayName + confText;
+            label.style.color = method === 'RULE' ? '#D4A84B' : '#4ADE80';
+
+            currentName.textContent = displayName + methodText;
+            currentMeaning.textContent = meanings[name] || meanings[displayName] || 'Traditional mudra';
+
+            // Track unique mudras
+            if (name !== lastMudra) {
+                lastMudra = name;
+                if (!uniqueMap[name]) {
+                    uniqueMap[name] = true;
+                    $('uniqueCount').textContent = Object.keys(uniqueMap).length;
+                }
+                addHistory(name, conf, method);
+            }
+        }
+
+        function addHistory(name, conf, method) {
+            const list = $('historyList');
+            const empty = list.querySelector('.empty-state');
+            if (empty) empty.remove();
+
+            const displayName = name.replace(' Mudra', '');
+            const abbr = displayName.substring(0, 2).toUpperCase();
+            const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            item.innerHTML = `
+                <div class="history-abbr">${abbr}</div>
+                <div class="history-info">
+                    <div class="history-name">${displayName}</div>
+                    <div class="history-time">${timeStr} · ${method || 'ML'}</div>
+                </div>
+                <div class="history-conf">${conf > 0 ? (conf * 100).toFixed(0) + '%' : '--'}</div>
+            `;
+
+            list.insertBefore(item, list.firstChild);
+        }
+
+        function updateTime() {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            const mins = Math.floor(elapsed / 60);
+            const secs = elapsed % 60;
+            $('duration').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
         }
 
         function start() {
+            if (!modelsLoaded) {
+                alert('Models are still loading. Please wait.');
+                return;
+            }
+
             video = $('webcam');
             canvas = $('canvas');
             ctx = canvas.getContext('2d');
-            // Match Python webcam resolution for consistent detection
             canvas.width = 640;
             canvas.height = 480;
 
-            // Initialize landmark canvas
             landmarkCanvas = $('landmarkCanvas');
             landmarkCtx = landmarkCanvas.getContext('2d');
-            var container = landmarkCanvas.parentElement;
+            const container = landmarkCanvas.parentElement;
             landmarkCanvas.width = container.offsetWidth;
             landmarkCanvas.height = container.offsetHeight;
 
             // Initialize MediaPipe Hands
             hands = new Hands({
-                locateFile: function(file) {
-                    return 'https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/' + file;
-                }
+                locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`
             });
 
+            // Settings matching Python API for consistency
+            // SPEED FIX: Lowered confidence thresholds for faster detection
             hands.setOptions({
                 maxNumHands: 1,
                 modelComplexity: 1,
-                minDetectionConfidence: 0.7,
-                minTrackingConfidence: 0.5
+                minDetectionConfidence: 0.6,  // Lowered from 0.7 (matches Python)
+                minTrackingConfidence: 0.6    // Lowered from 0.5 (matches Python)
             });
 
             hands.onResults(onResults);
 
             // Initialize camera
             camera = new Camera(video, {
-                onFrame: async function() {
+                onFrame: async () => {
                     if (running) {
                         await hands.send({ image: video });
                     }
@@ -582,7 +798,7 @@
                 height: 480
             });
 
-            camera.start().then(function() {
+            camera.start().then(() => {
                 $('placeholder').style.display = 'none';
                 $('startBtn').style.display = 'none';
                 $('stopBtn').style.display = 'inline-flex';
@@ -590,8 +806,12 @@
                 running = true;
                 startTime = Date.now();
                 sessionTimer = setInterval(updateTime, 1000);
-            }).catch(function(err) {
+                
+                // Reset FSM
+                if (mudraFSM) mudraFSM.reset();
+            }).catch((err) => {
                 console.error('Camera error:', err);
+                alert('Could not access camera. Please ensure camera permissions are granted.');
             });
         }
 
@@ -603,114 +823,43 @@
                 camera.stop();
             }
 
-            // Clear landmark canvas
-            if (landmarkCtx) {
-                landmarkCtx.clearRect(0, 0, landmarkCanvas.width, landmarkCanvas.height);
-            }
-
             $('placeholder').style.display = 'flex';
             $('startBtn').style.display = 'inline-flex';
             $('stopBtn').style.display = 'none';
             $('mudraName').style.display = 'none';
-        }
 
-        // Track last displayed mudra for sticky display (prevents flickering)
-        var displayedMudra = null;
-        var displayedConf = 0;
-
-        function show(mudra, conf, method) {
-            // STICKY DISPLAY: Only update UI when we have a confirmed mudra
-            // This prevents flickering by keeping the last confirmed mudra visible
-            if (mudra !== 'Unknown' && mudra !== 'No hand detected' && conf > 0) {
-                // Update display with confirmed mudra
-                displayedMudra = mudra;
-                displayedConf = conf;
-                $('mudraName').textContent = mudra;
-                $('currentName').textContent = mudra;
-                $('currentMeaning').textContent = meanings[mudra] || '';
-                
-                // Add to history if it's a new detection
-                var now = Date.now();
-                var threshold = (method === 'RULE') ? 0.5 : 0.3;
-                
-                if (conf >= threshold && (mudra !== lastMudra || now - lastTime > 800)) {
-                    addHistory(mudra, conf);
-                    lastMudra = mudra;
-                    lastTime = now;
-                }
-            } else if (mudra === 'No hand detected') {
-                // Only show "No hand" if we actually have no hand
-                $('mudraName').textContent = 'Show mudra...';
-                $('currentName').textContent = '--';
-                $('currentMeaning').textContent = 'Waiting for detection';
-                displayedMudra = null;
+            if (landmarkCtx) {
+                landmarkCtx.clearRect(0, 0, landmarkCanvas.width, landmarkCanvas.height);
             }
-            // If mudra === 'Unknown', keep displaying the last confirmed mudra (sticky)
-        }
-
-        function addHistory(mudra, conf) {
-            if (!uniqueMap[mudra]) {
-                uniqueMap[mudra] = { mudra: mudra, conf: conf };
-                $('uniqueCount').textContent = Object.keys(uniqueMap).length;
-                renderHistory();
-            }
-        }
-
-        function renderHistory() {
-            var mudras = Object.values(uniqueMap);
-            if (!mudras.length) {
-                $('historyList').innerHTML = '<div class="empty-state">No mudras detected yet</div>';
-                return;
-            }
-            var html = '';
-            for (var i = 0; i < mudras.length; i++) {
-                var h = mudras[i];
-                html += '<div class="history-item">';
-                html += '<div class="history-abbr">' + h.mudra.substring(0, 2) + '</div>';
-                html += '<div class="history-info"><div class="history-name">' + h.mudra + '</div>';
-                html += '<div class="history-time">' + (meanings[h.mudra] || '') + '</div></div>';
-                html += '</div>';
-            }
-            $('historyList').innerHTML = html;
-        }
-
-        function updateTime() {
-            var s = Math.floor((Date.now() - startTime) / 1000);
-            var m = Math.floor(s / 60);
-            s = s % 60;
-            $('duration').textContent = m + ':' + (s < 10 ? '0' : '') + s;
         }
 
         function reset() {
             stop();
-            
-            // Reset server-side FSM state
-            fetch(API + '/reset-session', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ session_id: SESSION_ID })
-            }).catch(function() {});
-            
-            // Generate new session ID
-            SESSION_ID = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            
             uniqueMap = {};
             lastMudra = null;
+            prevLandmarks = null;
             $('uniqueCount').textContent = '0';
             $('duration').textContent = '0:00';
+            $('historyList').innerHTML = '<div class="empty-state">No mudras detected yet</div>';
             $('currentName').textContent = '--';
             $('currentMeaning').textContent = 'Waiting for detection';
-            $('mudraName').textContent = '--';
-            renderHistory();
+            
+            if (mudraFSM) {
+                mudraFSM = new window.MudraDetection.MudraFSM();
+            }
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            checkAPI();
-            $('startBtn').addEventListener('click', start);
-            $('stopBtn').addEventListener('click', stop);
-            $('resetBtn').addEventListener('click', reset);
-        });
+        // Event listeners
+        $('startBtn').addEventListener('click', start);
+        $('stopBtn').addEventListener('click', stop);
+        $('resetBtn').addEventListener('click', reset);
+
+        // Initialize on page load
+        window.addEventListener('load', initializeModels);
     })();
     </script>
+    
+    <!-- Chatbot Widget -->
+    <script src="../js/chat-widget.js"></script>
 </body>
 </html>

@@ -4,3 +4,18 @@ __pycache__/
 *.pid
 .vscode/
 bg.py
+node_modules/
+
+# Electron build outputs
+dist/
+out/
+*.exe
+*.dmg
+*.deb
+*.rpm
+*.snap
+*.AppImage
+
+# Build cache
+.cache/
+.webpack/
