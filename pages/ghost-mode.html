@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Practice Mudras with Ghost Overlay and Voice Control">
+    <title>Ghost Mode Practice - Mudra Academy</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../css/pages.css">
+
+    <style>
+        .ghost-video-container {
+            position: relative;
+            width: 100%;
+            border-radius: var(--radius-xl);
+            overflow: hidden;
+            box-shadow: var(--shadow-xl);
+            aspect-ratio: 4/3;
+            background: #000;
+        }
+
+        #webcam {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        #ghost-overlay-img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            opacity: 0.3;
+            pointer-events: none;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            transform: scaleX(-1);
+        }
+
+        .controls-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-lg);
+        }
+
+        .mudra-status-card {
+            background: var(--color-light);
+            padding: var(--spacing-xl);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            text-align: center;
+            border: 1px solid rgba(139, 41, 66, 0.1);
+        }
+
+        .mudra-name-large {
+            font-family: var(--font-heading);
+            font-size: 2.5rem;
+            color: var(--color-primary);
+            margin-bottom: var(--spacing-md);
+        }
+
+        .nav-buttons-large {
+            display: flex;
+            gap: var(--spacing-md);
+            justify-content: center;
+            margin-top: var(--spacing-lg);
+        }
+
+        .nav-btn-large {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            border: 2px solid var(--color-gray-light);
+            background: transparent;
+            color: var(--color-dark);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-btn-large:hover {
+            border-color: var(--color-primary);
+            color: var(--color-primary);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .voice-status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+            padding: var(--spacing-xs) var(--spacing-md);
+            background: rgba(40, 200, 64, 0.1);
+            color: #28c840;
+            border-radius: var(--radius-full);
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .voice-status-badge.inactive {
+            background: rgba(100, 100, 100, 0.1);
+            color: var(--color-gray);
+        }
+
+        .pulse-dot-large {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+        
+        .voice-commands-card {
+            background: var(--color-light);
+            padding: var(--spacing-lg);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .voice-commands-card h4 {
+            color: var(--color-secondary);
+            margin-bottom: var(--spacing-md);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .command-list {
+            list-style: none;
+            padding: 0;
+            font-size: 0.9rem;
+            color: var(--color-gray);
+        }
+        
+        .command-list li {
+            margin-bottom: var(--spacing-sm);
+            padding-bottom: var(--spacing-sm);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .command-list li:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        .command-keyword {
+            font-weight: 700;
+            color: var(--color-dark);
+        }
+
+        @media (max-width: 900px) {
+            .ghost-layout {
+                grid-template-columns: 1fr !important;
+            }
+            .mudra-name-large {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar scrolled">
+        <div class="container">
+            <a href="../index.html" class="logo">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+                        <path d="M12 6v6l4 2"/>
+                    </svg>
+                </div>
+                <span class="logo-text">Mudra Academy</span>
+            </a>
+            <ul class="nav-links">
+                <li><a href="../index.html#features">Features</a></li>
+                <li><a href="library.html">Library</a></li>
+                <li><a href="detection-mode.html">Detection</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <section class="page-content section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Ghost <span class="text-gradient">Mode</span></h2>
+                <p>Align your hand with the guide using the split-view layout below.</p>
+            </div>
+
+            <div class="detection-container ghost-layout" style="display: grid; grid-template-columns: 2fr 1fr; gap: var(--spacing-2xl);">
+                <!-- Left: Video Area -->
+                <div class="ghost-video-container">
+                    <video id="webcam" autoplay playsinline muted></video>
+                    <img id="ghost-overlay-img" src="" alt="Ghost Overlay">
+                </div>
+
+                <!-- Right: Controls Sidebar -->
+                <div class="controls-sidebar">
+                    <div class="mudra-status-card">
+                        <div class="voice-status-badge" id="voice-indicator-badge">
+                            <div class="pulse-dot-large" id="voice-indicator"></div>
+                            <span id="voice-status-text">Microphone off</span>
+                        </div>
+                        
+                        <h3 style="font-size: 0.9rem; text-transform: uppercase; color: var(--color-gray); letter-spacing: 1px;">Current Mudra</h3>
+                        <h2 class="mudra-name-large" id="current-mudra-name">Pataka</h2>
+                        
+                        <div class="nav-buttons-large">
+                            <button class="nav-btn-large" id="prev-btn" aria-label="Previous">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="15 18 9 12 15 6"/>
+                                </svg>
+                            </button>
+                            <button class="nav-btn-large" id="next-btn" aria-label="Next">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="9 18 15 12 9 6"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <p style="margin-top: var(--spacing-md); font-size: 0.85rem; color: var(--color-gray);">
+                            Use <strong>Arrow Keys</strong> or <strong>Voice</strong>
+                        </p>
+                    </div>
+
+                    <div class="voice-commands-card">
+                        <h4>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                                <line x1="12" y1="19" x2="12" y2="23"/>
+                            </svg>
+                            Voice Commands
+                        </h4>
+                        <ul class="command-list">
+                            <li><span>Next Mudra</span> <span class="command-keyword">"Next"</span></li>
+                            <li><span>Previous Mudra</span> <span class="command-keyword">"Back"</span></li>
+                            <li><span>Toggle Ghost</span> <span class="command-keyword">"Ghost On/Off"</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="../js/ghost-mode.js"></script>
+</body>
+</html>

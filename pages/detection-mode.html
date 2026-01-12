@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,11 +9,14 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="../css/styles.css">
     <link rel="stylesheet" href="../css/pages.css">
 
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%238B2942' width='100' height='100' rx='20'/%3E%3Ctext x='50' y='65' font-size='50' text-anchor='middle' fill='%23D4A84B' font-family='serif'%3EM%3C/text%3E%3C/svg%3E">
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%238B2942' width='100' height='100' rx='20'/%3E%3Ctext x='50' y='65' font-size='50' text-anchor='middle' fill='%23D4A84B' font-family='serif'%3EM%3C/text%3E%3C/svg%3E">
 
     <style>
         .mode-grid {
@@ -22,6 +26,7 @@
             max-width: 800px;
             margin: 0 auto;
         }
+
         .mode-card {
             background: var(--color-light);
             border-radius: var(--radius-lg);
@@ -34,11 +39,13 @@
             display: block;
             overflow: hidden;
         }
+
         .mode-card:hover {
             transform: translateY(-4px);
             border-color: var(--color-primary);
             box-shadow: var(--shadow-lg);
         }
+
         .mode-image {
             width: 100%;
             height: 180px;
@@ -47,26 +54,31 @@
             overflow: hidden;
             background: var(--gradient-card);
         }
+
         .mode-image img {
             width: 100%;
             height: 100%;
             object-fit: cover;
             transition: transform var(--transition-base);
         }
+
         .mode-card:hover .mode-image img {
             transform: scale(1.05);
         }
+
         .mode-card h3 {
             font-family: var(--font-heading);
             font-size: 1.5rem;
             color: var(--color-dark);
             margin-bottom: var(--spacing-sm);
         }
+
         .mode-card p {
             color: var(--color-gray);
             font-size: 0.95rem;
             line-height: 1.6;
         }
+
         .mode-badge {
             display: inline-block;
             padding: var(--spacing-xs) var(--spacing-md);
@@ -79,14 +91,15 @@
         }
     </style>
 </head>
+
 <body>
     <nav class="navbar scrolled">
         <div class="container">
             <a href="../index.html" class="logo">
                 <div class="logo-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
-                        <path d="M12 6v6l4 2"/>
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
+                        <path d="M12 6v6l4 2" />
                     </svg>
                 </div>
                 <span class="logo-text">Mudra Academy</span>
@@ -126,6 +139,14 @@
                     <p>Practice double-hand mudras with YOLO-based detection</p>
                     <span class="mode-badge">8 Mudras</span>
                 </a>
+                <a href="ghost-mode.html" class="mode-card">
+                    <div class="mode-image">
+                        <img src="../assets/images/Mudras/Tripataka.jpg" alt="Ghost Mode Example">
+                    </div>
+                    <h3>Ghost Practice Mode</h3>
+                    <p>Perfect your alignment with a visual ghost overlay and voice controls</p>
+                    <span class="mode-badge">Voice Enabled</span>
+                </a>
             </div>
         </div>
     </section>
@@ -149,4 +170,5 @@
 
     <script src="../js/main.js"></script>
 </body>
+
 </html>
