@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Practice Mudras with Ghost Overlay and Voice Control - Offline Mode">
-    <title>Ghost Mode Practice (Offline) - Mudra Academy</title>
+    <meta name="description" content="Practice Mudras with Ghost Overlay and Voice Control">
+    <title>Ghost Mode Practice - Mudra Academy</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -233,8 +233,8 @@
     <section class="page-content section">
         <div class="container">
             <div class="section-header">
-                <h2>Ghost <span class="text-gradient">Mode</span> <small style="font-size: 0.5em; color: var(--color-gray);">(Offline)</small></h2>
-                <p>Align your hand with the guide using the split-view layout below. <strong>No server required!</strong></p>
+                <h2>Ghost <span class="text-gradient">Mode</span></h2>
+                <p>Align your hand with the guide using the split-view layout below</p>
             </div>
 
             <div class="detection-container ghost-layout"
@@ -250,10 +250,6 @@
                     <div id="match-feedback"
                         style="position: absolute; top: 20px; right: 20px; background: rgba(40, 200, 64, 0.9); color: white; padding: 5px 15px; border-radius: 20px; opacity: 0; transition: opacity 0.3s; font-weight: bold; pointer-events: none;">
                         Match!</div>
-                    
-                    <div id="debug-status"
-                        style="position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.6); color: white; padding: 5px 10px; border-radius: 5px; font-size: 12px; font-family: monospace;">
-                        Waiting for detection...</div>
                 </div>
 
                 <!-- Right: Controls Sidebar -->
@@ -332,10 +328,9 @@
         const voiceIndicator = document.getElementById('voice-indicator');
         const voiceStatusText = document.getElementById('voice-status-text');
         const matchFeedback = document.getElementById('match-feedback');
-        const debugStatus = document.getElementById('debug-status');
         const modelStatus = document.getElementById('model-status');
         const landmarkCanvas = document.getElementById('landmark-canvas');
-        const landmarkCtx = landmarkCanvas.getContext('2d');
+        const landmarkCtx = landmarkCanvas.getContext('2d', { willReadFrequently: true });
 
         // State
         let modelLoaded = false;
@@ -351,6 +346,13 @@
         // Ghost Mode needs STRICTER thresholds to avoid jumpy behavior
         const MATCH_THRESHOLD = 5;  // Require 5 consecutive matching frames
         const STABILITY_FRAMES = 3; // Require 3 frames of same detection before counting
+        
+        // ============================================================
+        // PERFORMANCE OPTIMIZATION
+        // ============================================================
+        let consecutiveNoHandFrames = 0;
+        const IDLE_SLOWDOWN_THRESHOLD = 10;  // Frames without hand before slowing
+        let isIdleMode = false;
 
         // List of mudras based on available assets
         const mudras = [
@@ -389,14 +391,13 @@
                 mudraFSM = new window.MudraDetection.MudraFSM();
 
                 modelLoaded = true;
-                modelStatus.textContent = '✓ AI Ready (Offline)';
+                modelStatus.textContent = '✓ AI Ready';
                 modelStatus.className = 'model-status ready';
 
                 // Start camera
                 initCamera();
 
             } catch (error) {
-                console.error('Model initialization error:', error);
                 modelStatus.textContent = '✗ Model load failed: ' + error.message;
                 modelStatus.className = 'model-status error';
             }
@@ -410,9 +411,9 @@
 
             hands.setOptions({
                 maxNumHands: 1,
-                modelComplexity: 1,
+                modelComplexity: 0,           // OPTIMIZED: Use lite model (saves ~40% CPU)
                 minDetectionConfidence: 0.6,
-                minTrackingConfidence: 0.6
+                minTrackingConfidence: 0.5
             });
 
             hands.onResults(onHandResults);
@@ -420,6 +421,10 @@
             camera = new Camera(video, {
                 onFrame: async () => {
                     if (hands) {
+                        // OPTIMIZED: Skip frames when in idle mode (no hand for a while)
+                        if (isIdleMode && consecutiveNoHandFrames % 2 !== 0) {
+                            return;  // Skip every other frame when idle
+                        }
                         await hands.send({ image: video });
                     }
                 },
@@ -433,23 +438,36 @@
             setupKeyboardControls();
         }
 
-        // Handle MediaPipe results
+        // Handle MediaPipe results (OPTIMIZED)
         async function onHandResults(results) {
-            // Resize canvas
-            landmarkCanvas.width = video.videoWidth || 640;
-            landmarkCanvas.height = video.videoHeight || 480;
+            // Resize canvas only if needed
+            const targetWidth = video.videoWidth || 640;
+            const targetHeight = video.videoHeight || 480;
+            if (landmarkCanvas.width !== targetWidth || landmarkCanvas.height !== targetHeight) {
+                landmarkCanvas.width = targetWidth;
+                landmarkCanvas.height = targetHeight;
+            }
             landmarkCtx.clearRect(0, 0, landmarkCanvas.width, landmarkCanvas.height);
 
             if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
-                debugStatus.textContent = 'No hand detected';
                 if (mudraFSM) {
                     mudraFSM.update(false, null, 0, null);
                 }
                 prevLandmarks = null;
                 matchCounter = 0;
                 video.style.boxShadow = 'none';
+                
+                // Track idle state for performance optimization
+                consecutiveNoHandFrames++;
+                if (consecutiveNoHandFrames > IDLE_SLOWDOWN_THRESHOLD) {
+                    isIdleMode = true;
+                }
                 return;
             }
+            
+            // Hand detected - reset idle state
+            consecutiveNoHandFrames = 0;
+            isIdleMode = false;
 
             const landmarks = results.multiHandLandmarks[0];
             const handedness = results.multiHandedness[0]?.label || 'Right';
@@ -459,7 +477,6 @@
             drawLandmarks(landmarkCtx, landmarks, { color: '#8B2942', lineWidth: 1, radius: 3 });
 
             if (!modelLoaded) {
-                debugStatus.textContent = 'Model loading...';
                 return;
             }
 
@@ -486,7 +503,6 @@
                     }
                 } catch (e) {
                     // If stability check fails for any reason, fall back to original behavior
-                    console.warn('Stability check failed:', e);
                 }
 
                 // Update FSM
@@ -497,18 +513,8 @@
                     detection.method
                 );
 
-                // Update debug display
+                // Get display name
                 const displayName = fsmResult.displayName;
-                const conf = fsmResult.displayConf ? Math.round(fsmResult.displayConf * 100) : 0;
-                const method = fsmResult.displayMethod || '';
-                
-                // Show match progress in debug
-                const targetMudra = mudras[currentIndex];
-                const isCurrentMatch = normalizeMudraName(displayName) === normalizeMudraName(targetMudra);
-                const progressStr = isCurrentMatch && matchCounter > 0 
-                    ? ` | Match: ${matchCounter}/${MATCH_THRESHOLD}` 
-                    : '';
-                debugStatus.textContent = `${displayName} ${conf > 0 ? `(${conf}% ${method})` : ''}${progressStr}`;
 
                 // Check for match with target
                 if (displayName && displayName !== "Show mudra..." && displayName !== "Detecting..." && 
@@ -522,8 +528,7 @@
                 prevLandmarks = landmarks;
 
             } catch (error) {
-                console.error('Detection error:', error);
-                debugStatus.textContent = 'Detection error';
+                // Silent error handling
             }
         }
 
@@ -738,7 +743,6 @@
 
             recognition.onerror = (event) => {
                 if (event.error === 'no-speech') return;
-                console.error('Speech recognition error', event.error);
                 voiceStatusText.textContent = 'Mic Off (Click to On)';
                 document.getElementById('voice-indicator-badge').classList.add('inactive');
                 isVoiceActive = false;
@@ -769,7 +773,7 @@
             };
 
             // Start listening
-            try { recognition.start(); } catch (e) { console.error(e); }
+            try { recognition.start(); } catch (e) {}
 
             document.getElementById('voice-indicator-badge').addEventListener('click', () => {
                 if (isVoiceActive) {

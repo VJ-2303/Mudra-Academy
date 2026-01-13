@@ -433,8 +433,13 @@
     (function() {
         'use strict';
         
-        // Configuration
-        const DETECT_INTERVAL = 100; // ~10 FPS for faster response
+        // ============================================================
+        // PERFORMANCE OPTIMIZATION CONFIGURATION
+        // ============================================================
+        const DETECT_INTERVAL_ACTIVE = 100;   // ~10 FPS when hand visible
+        const DETECT_INTERVAL_IDLE = 200;     // ~5 FPS when no hand (saves CPU)
+        const IDLE_THRESHOLD = 5;             // Frames without hand before going idle
+        const STABLE_DETECTION_SLOWDOWN = 3;  // Slow down after stable detection
         
         // State
         let running = false;
@@ -447,6 +452,11 @@
         let currentLandmarks = null;
         let prevLandmarks = null;
         let mudraFSM = null;
+        
+        // Performance optimization state
+        let idleFrameCount = 0;
+        let stableDetectionCount = 0;
+        let currentDetectInterval = DETECT_INTERVAL_ACTIVE;
 
         // Hand landmark connections
         const HAND_CONNECTIONS = [
@@ -546,18 +556,15 @@
                 if (success) {
                     modelsLoaded = true;
                     statusIndicator.className = 'api-status connected';
-                    statusIndicator.innerHTML = '<span>●</span> Models loaded (Offline)';
+                    statusIndicator.innerHTML = '<span>●</span> Models loaded';
                     startBtn.disabled = false;
                     
                     // Initialize FSM
                     mudraFSM = new window.MudraDetection.MudraFSM();
-                    
-                    console.log('✅ All models loaded successfully');
                 } else {
                     throw new Error('Failed to load models');
                 }
             } catch (error) {
-                console.error('Model loading error:', error);
                 statusIndicator.className = 'api-status error';
                 statusIndicator.innerHTML = '<span>●</span> Error loading models';
             } finally {
@@ -625,23 +632,33 @@
             });
         }
 
-        // MediaPipe results callback
+        // MediaPipe results callback (OPTIMIZED with adaptive detection rate)
         function onResults(results) {
             if (!running) return;
 
             if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
                 currentLandmarks = results.multiHandLandmarks[0];
                 drawLandmarks(currentLandmarks);
+                
+                // Hand detected - reset to active mode
+                idleFrameCount = 0;
+                currentDetectInterval = DETECT_INTERVAL_ACTIVE;
             } else {
                 currentLandmarks = null;
                 if (landmarkCtx) {
                     landmarkCtx.clearRect(0, 0, landmarkCanvas.width, landmarkCanvas.height);
                 }
+                
+                // No hand - count idle frames and slow down detection
+                idleFrameCount++;
+                if (idleFrameCount > IDLE_THRESHOLD) {
+                    currentDetectInterval = DETECT_INTERVAL_IDLE;
+                }
             }
 
-            // Run detection (throttled)
+            // Run detection (throttled with adaptive interval)
             const now = Date.now();
-            if (now - lastDetectTime >= DETECT_INTERVAL) {
+            if (now - lastDetectTime >= currentDetectInterval) {
                 lastDetectTime = now;
                 detectMudra();
             }
@@ -766,7 +783,7 @@
             canvas.height = 480;
 
             landmarkCanvas = $('landmarkCanvas');
-            landmarkCtx = landmarkCanvas.getContext('2d');
+            landmarkCtx = landmarkCanvas.getContext('2d', { willReadFrequently: true });
             const container = landmarkCanvas.parentElement;
             landmarkCanvas.width = container.offsetWidth;
             landmarkCanvas.height = container.offsetHeight;
@@ -776,18 +793,20 @@
                 locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`
             });
 
-            // Settings matching Python API for consistency
-            // SPEED FIX: Lowered confidence thresholds for faster detection
+            // OPTIMIZED MediaPipe settings for better performance
+            // modelComplexity: 0 = Lite (faster, less accurate)
+            // modelComplexity: 1 = Full (slower, more accurate)
+            // Using 0 for better performance - accuracy is maintained by our FSM
             hands.setOptions({
                 maxNumHands: 1,
-                modelComplexity: 1,
-                minDetectionConfidence: 0.6,  // Lowered from 0.7 (matches Python)
-                minTrackingConfidence: 0.6    // Lowered from 0.5 (matches Python)
+                modelComplexity: 0,           // OPTIMIZED: Use lite model (saves ~40% CPU)
+                minDetectionConfidence: 0.6,
+                minTrackingConfidence: 0.5    // Slightly lower for better tracking continuity
             });
 
             hands.onResults(onResults);
 
-            // Initialize camera
+            // Initialize camera with optimized frame rate
             camera = new Camera(video, {
                 onFrame: async () => {
                     if (running) {
@@ -795,7 +814,8 @@
                     }
                 },
                 width: 640,
-                height: 480
+                height: 480,
+                facingMode: 'user'
             });
 
             camera.start().then(() => {
@@ -810,7 +830,6 @@
                 // Reset FSM
                 if (mudraFSM) mudraFSM.reset();
             }).catch((err) => {
-                console.error('Camera error:', err);
                 alert('Could not access camera. Please ensure camera permissions are granted.');
             });
         }

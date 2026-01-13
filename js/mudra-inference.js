@@ -81,25 +81,76 @@ async function initializeInference(options = { loadYolo: false, loadRF: true }) 
     }
 }
 
+// ============================================================
+// MEMORY OPTIMIZATION: Reusable canvas and tensor pools
+// ============================================================
+let _yoloCanvas = null;
+let _yoloCtx = null;
+let _tempCanvas = null;
+let _tempCtx = null;
+let _yoloTensor = null;
+let _featureTensor = null;
+
 /**
- * Preprocess image for YOLO model
+ * Get or create reusable YOLO preprocessing canvas (640x640)
+ */
+function getYOLOCanvas() {
+    if (!_yoloCanvas) {
+        _yoloCanvas = document.createElement('canvas');
+        _yoloCanvas.width = 640;
+        _yoloCanvas.height = 640;
+        _yoloCtx = _yoloCanvas.getContext('2d', { willReadFrequently: true });
+    }
+    return { canvas: _yoloCanvas, ctx: _yoloCtx };
+}
+
+/**
+ * Get or create reusable temp canvas for ImageData conversion
+ */
+function getTempCanvas(width, height) {
+    if (!_tempCanvas || _tempCanvas.width !== width || _tempCanvas.height !== height) {
+        _tempCanvas = document.createElement('canvas');
+        _tempCanvas.width = width;
+        _tempCanvas.height = height;
+        _tempCtx = _tempCanvas.getContext('2d');
+    }
+    return { canvas: _tempCanvas, ctx: _tempCtx };
+}
+
+/**
+ * Get or create reusable YOLO tensor (avoids allocation per frame)
+ */
+function getYOLOTensor() {
+    if (!_yoloTensor) {
+        _yoloTensor = new Float32Array(3 * 640 * 640);
+    }
+    return _yoloTensor;
+}
+
+/**
+ * Get or create reusable feature tensor (17 features)
+ */
+function getFeatureTensor() {
+    if (!_featureTensor) {
+        _featureTensor = new Float32Array(17);
+    }
+    return _featureTensor;
+}
+
+/**
+ * Preprocess image for YOLO model (OPTIMIZED - reuses canvas/tensor)
  * @param {ImageData|HTMLCanvasElement|HTMLVideoElement} input - Input image
  * @returns {Float32Array} Preprocessed tensor
  */
 function preprocessYOLO(input) {
-    // Create canvas for processing
-    const canvas = document.createElement('canvas');
-    canvas.width = 640;
-    canvas.height = 640;
-    const ctx = canvas.getContext('2d');
+    // Reuse canvas instead of creating new one each frame
+    const { ctx } = getYOLOCanvas();
     
     // Draw input (resize to 640x640)
     if (input instanceof ImageData) {
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = input.width;
-        tempCanvas.height = input.height;
-        tempCanvas.getContext('2d').putImageData(input, 0, 0);
-        ctx.drawImage(tempCanvas, 0, 0, 640, 640);
+        const { canvas: temp, ctx: tempCtx } = getTempCanvas(input.width, input.height);
+        tempCtx.putImageData(input, 0, 0);
+        ctx.drawImage(temp, 0, 0, 640, 640);
     } else {
         ctx.drawImage(input, 0, 0, 640, 640);
     }
@@ -107,21 +158,16 @@ function preprocessYOLO(input) {
     const imageData = ctx.getImageData(0, 0, 640, 640);
     const data = imageData.data;
     
-    // Convert to CHW format and normalize [0, 1]
-    const tensor = new Float32Array(3 * 640 * 640);
-    let idx = 0;
+    // Reuse tensor instead of allocating new one each frame
+    const tensor = getYOLOTensor();
     
-    // Red channel
-    for (let i = 0; i < 640 * 640; i++) {
-        tensor[idx++] = data[i * 4] / 255.0;
-    }
-    // Green channel
-    for (let i = 0; i < 640 * 640; i++) {
-        tensor[idx++] = data[i * 4 + 1] / 255.0;
-    }
-    // Blue channel
-    for (let i = 0; i < 640 * 640; i++) {
-        tensor[idx++] = data[i * 4 + 2] / 255.0;
+    // OPTIMIZED: Single loop instead of three separate loops
+    const pixelCount = 640 * 640;
+    for (let i = 0; i < pixelCount; i++) {
+        const base = i * 4;
+        tensor[i] = data[base] / 255.0;                    // Red
+        tensor[pixelCount + i] = data[base + 1] / 255.0;   // Green
+        tensor[pixelCount * 2 + i] = data[base + 2] / 255.0; // Blue
     }
     
     return tensor;
@@ -203,11 +249,13 @@ async function detectDoubleHand(input) {
 
 /**
  * Extract 17 features from MediaPipe hand landmarks for Random Forest model
+ * OPTIMIZED: Reuses tensor allocation
  * @param {Array} landmarks - MediaPipe hand landmarks (21 points)
  * @returns {Float32Array} 17 features
  */
 function extractMLFeatures(landmarks) {
-    const features = new Float32Array(17);
+    // Reuse tensor instead of allocating new one each frame
+    const features = getFeatureTensor();
     let idx = 0;
     
     // Scale reference: palm width (wrist to middle MCP)
@@ -235,12 +283,14 @@ function extractMLFeatures(landmarks) {
     
     // Helper: Angle at point b formed by a-b-c (degrees)
     const getAngle = (a, b, c) => {
-        const v1 = { x: landmarks[a].x - landmarks[b].x, y: landmarks[a].y - landmarks[b].y };
-        const v2 = { x: landmarks[c].x - landmarks[b].x, y: landmarks[c].y - landmarks[b].y };
+        const v1x = landmarks[a].x - landmarks[b].x;
+        const v1y = landmarks[a].y - landmarks[b].y;
+        const v2x = landmarks[c].x - landmarks[b].x;
+        const v2y = landmarks[c].y - landmarks[b].y;
         
-        const dot = v1.x * v2.x + v1.y * v2.y;
-        const mag1 = Math.hypot(v1.x, v1.y);
-        const mag2 = Math.hypot(v2.x, v2.y);
+        const dot = v1x * v2x + v1y * v2y;
+        const mag1 = Math.hypot(v1x, v1y);
+        const mag2 = Math.hypot(v2x, v2y);
         
         if (mag1 === 0 || mag2 === 0) return 180;
         

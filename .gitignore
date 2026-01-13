@@ -19,3 +19,5 @@ out/
 # Build cache
 .cache/
 .webpack/
+
+*.pt

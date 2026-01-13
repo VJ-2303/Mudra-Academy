@@ -1,21 +1,50 @@
 /**
- * Natya Guru - Floating Chatbot Widget
+ * Natya Guru - Floating Chatbot Widget (Gemini API Edition)
  * Injects a floating button and chat interface into any page.
+ * Uses Google Gemini API directly - no backend required.
  */
 
 (function () {
-    // Configuration
-    const API_URL = 'http://localhost:5000/chat';
+    // ============================================================
+    // CONFIGURATION
+    // ============================================================
 
-    // Inject CSS if not present (handled by update to styles.css, but we function autonomously)
-    // We assume styles.css contains the necessary classes.
+    // Gemini API endpoint and key (hardcoded)
+    const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+    const GEMINI_API_KEY = 'AIzaSyDZagt_2g8ynnYm-XXY7_lv-EEhekvAo0o';
 
-    // Determine base path for assets based on current location
+    // System prompt for Natya Guru persona
+    const SYSTEM_PROMPT = `You are "Natya Guru", a wise and warm teacher of Bharatanatyam, the classical Indian dance form. Your role is to guide students through the spiritual and technical aspects of this ancient art.
+
+Your expertise includes:
+- All 28 Asamyukta Hastas (single-hand mudras) and 24 Samyukta Hastas (double-hand mudras)
+- The meanings, symbolism, and uses of each mudra in storytelling and expression
+- Bharatanatyam history, including its origins in Tamil Nadu temples
+- The Natyashastra and Abhinaya Darpana texts
+- Adavus (basic dance steps), Nritta (pure dance), and Abhinaya (expression)
+- The spiritual significance of dance as a form of worship
+
+Communication style:
+- Begin responses with a respectful greeting when appropriate (Namaskaram, Vanakkam)
+- Use both Sanskrit/Tamil terms and English explanations
+- Be encouraging and patient, like a traditional guru
+- Keep responses concise but informative (2-4 paragraphs max)
+- Use bullet points for listing mudras or steps
+- Include cultural context when relevant
+
+If asked about something outside Bharatanatyam, politely redirect the conversation back to dance topics.`;
+
+    // Conversation history for context
+    let conversationHistory = [];
+
+    // ============================================================
+    // HTML STRUCTURE
+    // ============================================================
+
     const isPagesDir = window.location.pathname.includes('/pages/');
     const assetPath = isPagesDir ? '../assets' : 'assets';
     const avatarSrc = `${assetPath}/images/no-bg/Mayura_no_bg.png`;
 
-    // HTML Structure
     const widgetHTML = `
         <div id="chat-widget-container">
             <!-- Chat Window -->
@@ -28,7 +57,7 @@
                         </div>
                         <div class="chat-identity">
                             <h4>Natya Guru</h4>
-                            <span class="status-indicator"><span class="status-dot"></span> Online</span>
+                            <span class="status-indicator"><span class="status-dot"></span> <span id="chat-status-text">Online</span></span>
                         </div>
                     </div>
                     <button id="chat-close-btn" aria-label="Close Chat">
@@ -39,7 +68,7 @@
                 <div id="chat-messages" class="chat-messages">
                     <div class="message-bubble bot welcome">
                         <div class="message-content">
-                            <p><strong>Namaskaram! 🙏</strong><br>I am Natya Guru. I can guide you through the spiritual and technical world of Bharatanatyam.</p>
+                            <p><strong>Namaskaram! 🙏</strong><br>I am Natya Guru. I can guide you through the spiritual and technical world of Bharatanatyam. Ask me about mudras, adavus, or the rich history of this ancient dance form.</p>
                         </div>
                         <span class="message-time">Just now</span>
                     </div>
@@ -74,18 +103,89 @@
     div.innerHTML = widgetHTML;
     document.body.appendChild(div);
 
-    // Elements
+    // ============================================================
+    // DOM ELEMENTS
+    // ============================================================
+
     const chatBtn = document.getElementById('chat-widget-btn');
     const chatWindow = document.getElementById('chat-window');
     const closeBtn = document.getElementById('chat-close-btn');
     const chatInput = document.getElementById('chat-input');
     const sendBtn = document.getElementById('chat-send-btn');
     const messagesContainer = document.getElementById('chat-messages');
+    const statusText = document.getElementById('chat-status-text');
 
     // State
     let isOpen = false;
 
-    // Functions
+    // ============================================================
+    // GEMINI API INTEGRATION
+    // ============================================================
+
+    async function callGeminiAPI(userMessage) {
+        // Add user message to history
+        conversationHistory.push({
+            role: 'user',
+            parts: [{ text: userMessage }]
+        });
+
+        // Build request with system instruction and conversation history
+        const requestBody = {
+            system_instruction: {
+                parts: [{ text: SYSTEM_PROMPT }]
+            },
+            contents: conversationHistory,
+            generationConfig: {
+                temperature: 0.7,
+                topP: 0.9,
+                topK: 40,
+                maxOutputTokens: 1024
+            }
+        };
+
+        const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('Gemini API Error:', errorData);
+            if (response.status === 429) {
+                throw new Error('RATE_LIMITED');
+            }
+            throw new Error(`API_ERROR: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Extract response text
+        const assistantMessage = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!assistantMessage) {
+            throw new Error('EMPTY_RESPONSE');
+        }
+
+        // Add assistant response to history
+        conversationHistory.push({
+            role: 'model',
+            parts: [{ text: assistantMessage }]
+        });
+
+        // Keep history manageable (last 10 exchanges)
+        if (conversationHistory.length > 20) {
+            conversationHistory = conversationHistory.slice(-20);
+        }
+
+        return assistantMessage;
+    }
+
+    // ============================================================
+    // UI FUNCTIONS
+    // ============================================================
+
     function toggleChat() {
         isOpen = !isOpen;
         chatWindow.classList.toggle('hidden');
@@ -96,11 +196,24 @@
         }
     }
 
+    function updateStatus(status) {
+        const statusDot = document.querySelector('.status-dot');
+        statusText.textContent = status;
+
+        if (status === 'Online') {
+            statusDot.style.background = '#28c840';
+        } else if (status === 'Thinking...') {
+            statusDot.style.background = '#ffbd2e';
+        } else {
+            statusDot.style.background = '#ff5f57';
+        }
+    }
+
     function addMessage(text, isUser) {
         const msgDiv = document.createElement('div');
         msgDiv.className = `message-bubble ${isUser ? 'user' : 'bot'}`;
 
-        const content = isUser ? text : formatBotResponse(text);
+        const content = isUser ? escapeHtml(text) : formatBotResponse(text);
 
         msgDiv.innerHTML = `
             <p>${content}</p>
@@ -109,6 +222,17 @@
 
         messagesContainer.appendChild(msgDiv);
         scrollToBottom();
+    }
+
+    function addErrorMessage(errorType) {
+        const messages = {
+            'RATE_LIMITED': "Too many requests. Please wait a moment and try again.",
+            'NETWORK_ERROR': "Network error. Please check your internet connection.",
+            'EMPTY_RESPONSE': "I received an empty response. Please try rephrasing your question.",
+            'DEFAULT': "Something went wrong. Please try again."
+        };
+
+        addMessage(messages[errorType] || messages['DEFAULT'], false);
     }
 
     function addLoadingIndicator() {
@@ -133,6 +257,12 @@
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
     }
 
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
     function formatBotResponse(text) {
         if (!text) return '';
 
@@ -150,18 +280,12 @@
         html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
 
         // 5. Unordered Lists (- item)
-        // Convert lines starting with "- " or "* " to list items
-        // We wrap the whole block in <ul> if strictly adjacent, but for simplicity in a chat bubble:
-        // just treating them as bullet lines with <br> helps, or better:
         html = html.replace(/^\s*[-*]\s+(.*)$/gim, '<li>$1</li>');
 
-        // Wrap adjacent <li>s in <ul> (simple regex approach)
-        // This regex looks for a sequence of <li>...</li> and wraps them.
-        // It's not perfect but works for simple chat outputs.
+        // Wrap adjacent <li>s in <ul>
         html = html.replace(/(<li>.*<\/li>\s*)+/gim, '<ul>$&</ul>');
 
         // 6. Line breaks
-        // Replace newlines with <br>, but NOT inside <ul> or after headings
         html = html.replace(/\n/g, '<br>');
 
         // Cleanup extra <br> after </ul> or </h3>
@@ -172,6 +296,10 @@
         return html;
     }
 
+    // ============================================================
+    // MESSAGE HANDLING
+    // ============================================================
+
     async function sendMessage() {
         const text = chatInput.value.trim();
         if (!text) return;
@@ -180,31 +308,34 @@
         addMessage(text, true);
         chatInput.value = '';
         addLoadingIndicator();
+        updateStatus('Thinking...');
 
         try {
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text })
-            });
-
-            const data = await response.json();
+            const response = await callGeminiAPI(text);
             removeLoadingIndicator();
-
-            if (data.success) {
-                addMessage(data.reply, false);
-            } else {
-                addMessage("I'm having trouble connecting to my wisdom source. Please check the API Server.", false);
-                console.error(data.error);
-            }
+            updateStatus('Online');
+            addMessage(response, false);
         } catch (err) {
             removeLoadingIndicator();
-            addMessage("Network error. Is the server running?", false);
-            console.error(err);
+            updateStatus('Online');
+            console.error('Gemini API Error:', err);
+
+            if (err.message === 'RATE_LIMITED') {
+                addErrorMessage('RATE_LIMITED');
+            } else if (err.message.includes('Failed to fetch')) {
+                addErrorMessage('NETWORK_ERROR');
+            } else if (err.message === 'EMPTY_RESPONSE') {
+                addErrorMessage('EMPTY_RESPONSE');
+            } else {
+                addErrorMessage('DEFAULT');
+            }
         }
     }
 
-    // Event Listeners
+    // ============================================================
+    // EVENT LISTENERS
+    // ============================================================
+
     chatBtn.addEventListener('click', toggleChat);
     closeBtn.addEventListener('click', toggleChat);
 

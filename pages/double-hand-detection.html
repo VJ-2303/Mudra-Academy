@@ -443,7 +443,13 @@
         // Class names MUST match the model training order
         const YOLO_CLASSES = ['Anjali', 'Naagabandha', 'Chakra', 'Karkota', 'Kartariswastika', 'Pasha', 'Shanka', 'Shivalinga'];
         const CONF_THRESHOLD = 0.25;
-        const DETECT_INTERVAL = 150; // ~6-7 FPS for YOLO (heavier model)
+        
+        // ============================================================
+        // PERFORMANCE OPTIMIZATION CONFIGURATION
+        // ============================================================
+        const DETECT_INTERVAL_ACTIVE = 150;   // ~6-7 FPS when detecting
+        const DETECT_INTERVAL_STABLE = 300;   // ~3 FPS when mudra is stable (saves CPU)
+        const STABLE_FRAMES_THRESHOLD = 5;    // Frames of same detection before slowing
         
         // Double-hand mudra meanings
         const meanings = {
@@ -465,8 +471,31 @@
         let sessionTimer, startTime;
         let uniqueMap = {}, lastMudra = null;
         let lastDetectTime = 0;
+        
+        // Performance optimization state
+        let stableDetectionCount = 0;
+        let currentDetectInterval = DETECT_INTERVAL_ACTIVE;
+        
+        // Reusable buffers to reduce garbage collection
+        let _preprocessCanvas = null;
+        let _preprocessCtx = null;
+        let _tensorBuffer = null;
 
         const $ = (id) => document.getElementById(id);
+        
+        // Get or create reusable preprocessing resources
+        function getPreprocessResources() {
+            if (!_preprocessCanvas) {
+                _preprocessCanvas = document.createElement('canvas');
+                _preprocessCanvas.width = 640;
+                _preprocessCanvas.height = 640;
+                _preprocessCtx = _preprocessCanvas.getContext('2d', { willReadFrequently: true });
+            }
+            if (!_tensorBuffer) {
+                _tensorBuffer = new Float32Array(3 * 640 * 640);
+            }
+            return { canvas: _preprocessCanvas, ctx: _preprocessCtx, tensor: _tensorBuffer };
+        }
 
         // Initialize YOLO model
         async function initializeModel() {
@@ -485,7 +514,6 @@
                     ort.env.wasm.numThreads = 1;
                 }
                 
-                console.log('Loading model from:', MODEL_PATH);
                 yoloSession = await ort.InferenceSession.create(MODEL_PATH, {
                     executionProviders: ['wasm', 'cpu'],
                     graphOptimizationLevel: 'all'
@@ -493,15 +521,10 @@
                 
                 modelLoaded = true;
                 statusIndicator.className = 'api-status connected';
-                statusIndicator.innerHTML = '<span>●</span> YOLO model loaded (Offline)';
+                statusIndicator.innerHTML = '<span>●</span> YOLO model loaded';
                 startBtn.disabled = false;
                 
-                console.log('✅ YOLO model loaded successfully');
-                console.log('Input names:', yoloSession.inputNames);
-                console.log('Output names:', yoloSession.outputNames);
-                
             } catch (error) {
-                console.error('Model loading error:', error);
                 statusIndicator.className = 'api-status error';
                 statusIndicator.innerHTML = '<span>●</span> Error loading model';
             } finally {
@@ -509,28 +532,23 @@
             }
         }
 
-        // Preprocess image for YOLO
+        // Preprocess image for YOLO (OPTIMIZED - reuses buffers)
         function preprocessImage(video) {
-            // Draw video frame to canvas
-            ctx.drawImage(video, 0, 0, 640, 640);
-            const imageData = ctx.getImageData(0, 0, 640, 640);
+            // Use reusable resources instead of creating new ones
+            const { ctx: prepCtx, tensor } = getPreprocessResources();
+            
+            // Draw video frame to reusable canvas
+            prepCtx.drawImage(video, 0, 0, 640, 640);
+            const imageData = prepCtx.getImageData(0, 0, 640, 640);
             const data = imageData.data;
             
-            // Convert to CHW format and normalize [0, 1]
-            const tensor = new Float32Array(3 * 640 * 640);
-            let idx = 0;
-            
-            // Red channel
-            for (let i = 0; i < 640 * 640; i++) {
-                tensor[idx++] = data[i * 4] / 255.0;
-            }
-            // Green channel
-            for (let i = 0; i < 640 * 640; i++) {
-                tensor[idx++] = data[i * 4 + 1] / 255.0;
-            }
-            // Blue channel
-            for (let i = 0; i < 640 * 640; i++) {
-                tensor[idx++] = data[i * 4 + 2] / 255.0;
+            // OPTIMIZED: Single loop instead of three separate loops
+            const pixelCount = 640 * 640;
+            for (let i = 0; i < pixelCount; i++) {
+                const base = i * 4;
+                tensor[i] = data[base] / 255.0;                    // Red
+                tensor[pixelCount + i] = data[base + 1] / 255.0;   // Green
+                tensor[pixelCount * 2 + i] = data[base + 2] / 255.0; // Blue
             }
             
             return tensor;
@@ -598,7 +616,6 @@
                 return null;
                 
             } catch (error) {
-                console.error('YOLO inference error:', error);
                 return null;
             }
         }
@@ -643,20 +660,36 @@
             overlayCtx.fillText(label, x1 + 8, y1 - 6);
         }
 
-        // Detection loop
+        // Detection loop (OPTIMIZED with adaptive interval)
         async function detectLoop() {
             if (!running || !modelLoaded) return;
             
             const now = Date.now();
-            if (now - lastDetectTime >= DETECT_INTERVAL) {
+            if (now - lastDetectTime >= currentDetectInterval) {
                 lastDetectTime = now;
                 
                 const detection = await runYOLO();
                 
                 if (detection) {
+                    // Check if detection is stable (same as last)
+                    if (detection.className === lastMudra) {
+                        stableDetectionCount++;
+                        // Slow down detection after stable frames (saves CPU)
+                        if (stableDetectionCount >= STABLE_FRAMES_THRESHOLD) {
+                            currentDetectInterval = DETECT_INTERVAL_STABLE;
+                        }
+                    } else {
+                        // New detection - reset to active rate
+                        stableDetectionCount = 0;
+                        currentDetectInterval = DETECT_INTERVAL_ACTIVE;
+                    }
+                    
                     show(detection.className, detection.confidence);
                     drawOverlay(detection);
                 } else {
+                    // No detection - reset
+                    stableDetectionCount = 0;
+                    currentDetectInterval = DETECT_INTERVAL_ACTIVE;
                     show(null, 0);
                     overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
                 }
@@ -768,7 +801,6 @@
                 requestAnimationFrame(detectLoop);
             })
             .catch((err) => {
-                console.error('Camera error:', err);
                 alert('Could not access camera. Please ensure camera permissions are granted.');
             });
         }

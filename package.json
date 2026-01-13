@@ -6,9 +6,15 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
-    "build": "electron-builder --win --x64",
-    "build:portable": "electron-builder --win portable --x64",
-    "build:all": "electron-builder --win --x64 --ia32"
+    "build:win": "electron-builder --win --x64",
+    "build:win:portable": "electron-builder --win portable --x64",
+    "build:win:all": "electron-builder --win --x64 --ia32",
+    "build:linux": "electron-builder --linux --x64",
+    "build:linux:appimage": "electron-builder --linux AppImage --x64",
+    "build:linux:deb": "electron-builder --linux deb --x64",
+    "build:linux:rpm": "electron-builder --linux rpm --x64",
+    "build:all": "electron-builder --win --linux --x64",
+    "build": "electron-builder"
   },
   "keywords": [
     "mudra",
