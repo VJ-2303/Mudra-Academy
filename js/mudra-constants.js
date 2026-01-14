@@ -110,6 +110,10 @@ const MUDRA_NORMALIZATION_MAP = {
     'trisula': 'Trishula',
     'trishula mudra': 'Trishula',
 
+    // Shanka (Conch - double-hand but may appear)
+    'shanka': 'Shanka',
+    'shanka mudra': 'Shanka',
+
     // Anjali / Samyukta (if needed later)
     'anjali mudra': 'Anjali'
 };
