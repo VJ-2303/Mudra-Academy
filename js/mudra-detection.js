@@ -263,6 +263,10 @@ function isPatakaMudra(landmarks, scaleRef) {
 
     if (!(indexStraight && middleStraight && ringStraight && pinkyStraight)) return false;
 
+    const index_pinky_nd = normDistLazy(landmarks, 8, 20, scaleRef);
+
+    if (index_pinky_nd > 0.6) return false;
+
     const thumbIndexNd = normDistLazy(landmarks, 4, 5, scaleRef);
     const mcpNd = normDistLazy(landmarks, 5, 9, scaleRef);
     const thumbTucked = thumbIndexNd < (mcpNd * 1.5);
@@ -276,6 +280,10 @@ function isTripatakaMudra(landmarks, scale) {
     if (!isFingerStraight(landmarks, 17, 18, 20, 0.94)) return false;
 
     if (isFingerStraight(landmarks, 13, 14, 16, 0.88)) return false;
+
+    const index_pinky_nd = normDistLazy(landmarks, 8, 20, scaleRef);
+
+    if (index_pinky_nd > 0.6) return false;
 
     if (normDistLazy(landmarks, 4, 16, scale) < scale * 0.9) return false;
     if (normDistLazy(landmarks, 4, 5, scale) > scale * 1.6) return false;
@@ -532,6 +540,25 @@ function isSimhamukha(landmarks, scaleRef) {
     return true;
 }
 
+function isHamsapakashaMudra(landmarks, scaleRef) {
+    // Pinky and thumb must be straight
+    const pinkyStraight = isFingerStraight(landmarks, 17, 18, 20, 0.85);
+    const thumbStraight = isFingerStraight(landmarks, 2, 3, 4, 0.80);
+
+    // Index, middle, ring must be bent
+    const indexBent = !isFingerStraight(landmarks, 5, 6, 8, 0.85);
+    const middleBent = !isFingerStraight(landmarks, 9, 10, 12, 0.85);
+    const ringBent = !isFingerStraight(landmarks, 13, 14, 16, 0.85);
+
+    if (!(pinkyStraight && thumbStraight && indexBent && middleBent && ringBent)) return false;
+
+    // Thumb must touch index MCP (start of index finger)
+    const thumbIndexMcpNd = normDistLazy(landmarks, 4, 5, scaleRef);
+    if (thumbIndexMcpNd > 0.45) return false;
+
+    return true;
+}
+
 function isArdhapataka(landmarks, scaleRef) {
     const indexStraight = isFingerStraight(landmarks, 5, 6, 8);
     const middleStraight = isFingerStraight(landmarks, 9, 10, 12);
@@ -547,15 +574,41 @@ function isArdhapataka(landmarks, scaleRef) {
     return thumbIndexNd < (mcpNd * 1.5);
 }
 
+/**
+ * Detects Mayura Mudra:
+ * - Ring finger tip touches Thumb tip.
+ * - Index, Middle, and Pinky fingers are extended straight.
+ */
+/**
+ * Detects Mayura Mudra:
+ * - Ring finger tip touches Thumb tip.
+ * - Index, Middle, and Pinky fingers are straight.
+ * - Index and Pinky fingers are NOT spread apart (held relatively close).
+ */
 function isMayuraMudra(landmarks, scaleRef) {
-    if (!isFingerStraight(landmarks, 5, 6, 8, 0.90)) return false;
-    if (!isFingerStraight(landmarks, 9, 10, 12, 0.90)) return false;
-    if (!isFingerStraight(landmarks, 17, 18, 20, 0.90)) return false;
+    // 1. Check Extended Fingers (Index, Middle, Pinky)
+    // Threshold 0.85 allows for slight natural curvature.
+    if (!isFingerStraight(landmarks, 5, 6, 8, 0.85)) return false;
+    if (!isFingerStraight(landmarks, 9, 10, 12, 0.85)) return false;
+    if (!isFingerStraight(landmarks, 17, 18, 20, 0.85)) return false;
 
-    if (isFingerStraight(landmarks, 13, 14, 16, 0.88)) return false;
+    // 2. Check Connection: Ring Tip (16) touching Thumb Tip (4)
+    // Threshold 0.1 ensures they are actually touching.
+    const thumbRingDist = normDistLazy(landmarks, 4, 16, scaleRef);
+    if (thumbRingDist > 0.1) return false;
 
-    const thumbRingNd = normDistLazy(landmarks, 4, 16, scaleRef);
-    if (thumbRingNd > scaleRef * 0.45) return false;
+    // 3. Check Ring Finger Bend
+    // The ring finger must be bent to touch the thumb.
+    if (isFingerStraight(landmarks, 13, 14, 16, 0.90)) return false;
+
+    // 4. Spread Check (Index vs Pinky)
+    // We calculate the distance between Index Tip (8) and Pinky Tip (20).
+    // If this distance is too large, the fingers are splayed.
+    const indexToPinkyDist = normDistLazy(landmarks, 8, 20, scaleRef);
+
+    // 0.6 is the threshold. If distance is > 60% of the palm size, 
+    // the fingers are likely spread too wide.
+    if (indexToPinkyDist > 0.6) return false;
 
     return true;
 }
@@ -589,7 +642,7 @@ const RULE_MUDRA_FUNCTIONS = {
     "Kartari Mukham Mudra": isKartariMukhamMudra,
     "Trishula Mudra": isTrishulaMudra,
     "Mrigasheersha Mudra": isMrigasheersha,
-    "Simhamukha Mudra": isSimhamukha,
+    "Hamsapaksha Mudra": isHamsapakashaMudra,
     "Ardhapataka Mudra": isArdhapataka,
     "Shuka Tundam Mudra": isShukaTundam,
     "Arala Mudra": isAralaMudra,

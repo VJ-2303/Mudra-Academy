@@ -377,9 +377,9 @@
                 });
                 hands.setOptions({
                     maxNumHands: 1,
-                    modelComplexity: 0,
-                    minDetectionConfidence: 0.6,
-                    minTrackingConfidence: 0.5
+                    modelComplexity: 1,  // Full model for better accuracy (0 = lite, 1 = full)
+                    minDetectionConfidence: 0.7,
+                    minTrackingConfidence: 0.6
                 });
                 hands.onResults(onResults);
 
@@ -401,127 +401,123 @@
                 landmarkCtx.clearRect(0, 0, w, h);
 
                 if (!results.multiHandLandmarks || !results.multiHandLandmarks.length) {
-                    if (!results.multiHandLandmarks || !results.multiHandLandmarks.length) {
-                        matchCounter = 0;
-                        video.style.boxShadow = 'none';
-                        return;
-                    }
-
-                    const landmarks = results.multiHandLandmarks[0];
-                    drawConnectors(landmarkCtx, landmarks, HAND_CONNECTIONS, { color: '#D4A84B', lineWidth: 2 });
-                    drawLandmarks(landmarkCtx, landmarks, { color: '#8B2942', lineWidth: 1, radius: 3 });
-
-                    if (!modelLoaded) return;
-
-                    try {
-                        // Direct hybrid detection
-                        const result = await window.MudraDetection.detectMudraHybrid(landmarks, 'Right', prevLandmarks);
-                        prevLandmarks = landmarks;
-
-                        const detected = result.mudraName;
-                        const conf = result.confidence;
-
-
-
-                        if (detected && detected !== 'Unknown' && detected !== 'Stabilizing...') {
-                            checkMatch(detected);
-                        } else {
-                            matchCounter = 0;
-                            video.style.boxShadow = 'none';
-                        }
-                    } catch (e) {
-                        console.error('Detection error:', e);
-                    }
+                    matchCounter = 0;
+                    video.style.boxShadow = 'none';
+                    return;
                 }
 
-                // Normalize name for comparison
-                function norm(name) {
-                    if (!name) return '';
-                    if (window.MudraConstants?.normalizeMudraName) {
-                        return window.MudraConstants.normalizeMudraName(name);
-                    }
-                    return name.toLowerCase().replace(' mudra', '').trim();
-                }
+                const landmarks = results.multiHandLandmarks[0];
+                drawConnectors(landmarkCtx, landmarks, HAND_CONNECTIONS, { color: '#D4A84B', lineWidth: 2 });
+                drawLandmarks(landmarkCtx, landmarks, { color: '#8B2942', lineWidth: 1, radius: 3 });
 
-                // Check match
-                function checkMatch(detected) {
-                    if (isTransitioning) return;
+                if (!modelLoaded) return;
 
-                    const target = mudras[currentIndex];
-                    if (norm(detected) === norm(target)) {
-                        matchCounter++;
-                        video.style.boxShadow = `0 0 ${15 + matchCounter * 10}px #28c840`;
-                        if (matchCounter >= MATCH_THRESHOLD) triggerSuccess();
+                try {
+                    // Direct hybrid detection
+                    const result = await window.MudraDetection.detectMudraHybrid(landmarks, 'Right', prevLandmarks);
+                    prevLandmarks = landmarks;
+
+                    const detected = result.mudraName;
+
+                    if (detected && detected !== 'Unknown' && detected !== 'Stabilizing...') {
+                        checkMatch(detected);
                     } else {
                         matchCounter = 0;
                         video.style.boxShadow = 'none';
                     }
+                } catch (e) {
+                    console.error('Detection error:', e);
                 }
+            }
 
-                // Success
-                function triggerSuccess() {
-                    if (isTransitioning) return;
-                    isTransitioning = true;
+            // Normalize name for comparison
+            function norm(name) {
+                if (!name) return '';
+                if (window.MudraConstants?.normalizeMudraName) {
+                    return window.MudraConstants.normalizeMudraName(name);
+                }
+                return name.toLowerCase().replace(' mudra', '').trim();
+            }
+
+            // Check match
+            function checkMatch(detected) {
+                if (isTransitioning) return;
+
+                const target = mudras[currentIndex];
+                if (norm(detected) === norm(target)) {
+                    matchCounter++;
+                    video.style.boxShadow = `0 0 ${15 + matchCounter * 10}px #28c840`;
+                    if (matchCounter >= MATCH_THRESHOLD) triggerSuccess();
+                } else {
                     matchCounter = 0;
-                    video.style.boxShadow = '0 0 50px #28c840';
-                    matchFeedback.style.opacity = 1;
-
-                    setTimeout(() => {
-                        matchFeedback.style.opacity = 0;
-                        video.style.boxShadow = 'none';
-                        nextMudra();
-                        setTimeout(() => { isTransitioning = false; }, 300);
-                    }, 600);
+                    video.style.boxShadow = 'none';
                 }
+            }
 
-                // Display
-                function updateDisplay() {
-                    const mudra = mudras[currentIndex];
-                    mudraNameEl.textContent = mudra;
-                    ghostImg.src = getAssetPath(mudra);
-                    ghostImg.style.opacity = ghostEnabled ? 0.35 : 0;
+            // Success
+            function triggerSuccess() {
+                if (isTransitioning) return;
+                isTransitioning = true;
+                matchCounter = 0;
+                video.style.boxShadow = '0 0 50px #28c840';
+                matchFeedback.style.opacity = 1;
+
+                setTimeout(() => {
+                    matchFeedback.style.opacity = 0;
+                    video.style.boxShadow = 'none';
+                    nextMudra();
+                    setTimeout(() => { isTransitioning = false; }, 300);
+                }, 600);
+            }
+
+            // Display
+            function updateDisplay() {
+                const mudra = mudras[currentIndex];
+                mudraNameEl.textContent = mudra;
+                ghostImg.src = getAssetPath(mudra);
+                ghostImg.style.opacity = ghostEnabled ? 0.35 : 0;
+            }
+
+            function getAssetPath(name) {
+                let f = name;
+                if (window.MudraConstants?.getMudraAssetBase) {
+                    f = window.MudraConstants.getMudraAssetBase(name);
                 }
+                return `../assets/images/no-bg/${f}_no_bg.png`;
+            }
 
-                function getAssetPath(name) {
-                    let f = name;
-                    if (window.MudraConstants?.getMudraAssetBase) {
-                        f = window.MudraConstants.getMudraAssetBase(name);
-                    }
-                    return `../assets/images/no-bg/${f}_no_bg.png`;
-                }
+            // Navigation
+            function nextMudra() {
+                currentIndex = (currentIndex + 1) % mudras.length;
+                matchCounter = 0;
+                updateDisplay();
+            }
 
-                // Navigation
-                function nextMudra() {
-                    currentIndex = (currentIndex + 1) % mudras.length;
-                    matchCounter = 0;
-                    updateDisplay();
-                }
+            function prevMudra() {
+                currentIndex = (currentIndex - 1 + mudras.length) % mudras.length;
+                matchCounter = 0;
+                updateDisplay();
+            }
 
-                function prevMudra() {
-                    currentIndex = (currentIndex - 1 + mudras.length) % mudras.length;
-                    matchCounter = 0;
-                    updateDisplay();
-                }
+            function toggleGhost() {
+                ghostEnabled = !ghostEnabled;
+                ghostImg.style.opacity = ghostEnabled ? 0.35 : 0;
+            }
 
-                function toggleGhost() {
-                    ghostEnabled = !ghostEnabled;
-                    ghostImg.style.opacity = ghostEnabled ? 0.35 : 0;
-                }
-
-                // Keyboard
-                document.addEventListener('keydown', (e) => {
-                    if (e.key === 'ArrowRight') nextMudra();
-                    if (e.key === 'ArrowLeft') prevMudra();
-                    if (e.key === 'g') toggleGhost();
-                });
-
-                // Button listeners
-                nextBtn.addEventListener('click', nextMudra);
-                prevBtn.addEventListener('click', prevMudra);
-
-                // Start
-                initModel();
+            // Keyboard
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowRight') nextMudra();
+                if (e.key === 'ArrowLeft') prevMudra();
+                if (e.key === 'g') toggleGhost();
             });
+
+            // Button listeners
+            nextBtn.addEventListener('click', nextMudra);
+            prevBtn.addEventListener('click', prevMudra);
+
+            // Start
+            initModel();
+        });
     </script>
 
     <!-- Chatbot Widget -->
