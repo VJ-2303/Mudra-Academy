@@ -29,7 +29,6 @@ let rfClasses = null;
  * Initialize ONNX Runtime session for Random Forest model
  */
 async function initializeInference() {
-    console.log('🔄 Initializing ONNX Runtime...');
 
     // Configure ONNX Runtime for single-threaded operation (avoids COOP/COEP issues)
     if (typeof ort !== 'undefined') {
@@ -37,18 +36,15 @@ async function initializeInference() {
     }
 
     try {
-        console.log('Loading RF model from:', MODEL_PATHS.randomForest);
         rfSession = await ort.InferenceSession.create(MODEL_PATHS.randomForest, {
             executionProviders: ['wasm', 'cpu'],
             graphOptimizationLevel: 'all'
         });
-        console.log('✅ Random Forest model loaded');
 
         // Load class names
-        console.log('Loading classes from:', MODEL_PATHS.classes);
+        // Load class names
         const response = await fetch(MODEL_PATHS.classes);
         rfClasses = await response.json();
-        console.log(`✅ Loaded ${rfClasses.length} RF classes`);
 
         return true;
     } catch (error) {

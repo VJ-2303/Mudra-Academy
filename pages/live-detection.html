@@ -634,7 +634,7 @@
                 loadingOverlay.style.display = 'flex';
 
                 try {
-                    loadingText.textContent = 'Loading Random Forest model (~60MB)...';
+                    loadingText.textContent = 'Loading AI...';
 
                     // Initialize only RF model (not YOLO - that's for double-hand)
                     const success = await window.MudraInference.initialize({ loadYolo: false, loadRF: true });
@@ -807,12 +807,11 @@
                 // Display detected mudra
                 const displayName = name.replace(' Mudra', '');
                 const confText = conf > 0 ? ` (${(conf * 100).toFixed(0)}%)` : '';
-                const methodText = method ? ` [${method}]` : '';
 
                 label.textContent = displayName + confText;
                 label.style.color = method === 'RULE' ? '#D4A84B' : '#4ADE80';
 
-                currentName.textContent = displayName + methodText;
+                currentName.textContent = displayName;
                 currentMeaning.textContent = meanings[name] || meanings[displayName] || 'Traditional mudra';
 
                 // Track unique mudras

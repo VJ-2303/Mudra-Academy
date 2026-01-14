@@ -410,7 +410,7 @@
                         </div>
                         <div class="loading-overlay" id="loadingOverlay" style="display: none;">
                             <div class="loading-spinner"></div>
-                            <div class="loading-text" id="loadingText">Loading YOLO model...</div>
+                            <div class="loading-text" id="loadingText">Loading AI...</div>
                         </div>
                         <div class="mudra-label" id="mudraName" style="display:none;">--</div>
                     </div>
@@ -446,7 +446,7 @@
                             System Status
                         </h3>
                         <div class="api-status loading" id="statusIndicator">
-                            <span>●</span> Loading YOLO model...
+                            <span>●</span> Loading...
                         </div>
                     </div>
                     <div class="sidebar-card">
@@ -577,7 +577,7 @@
                 const status = $('statusIndicator');
 
                 overlay.style.display = 'flex';
-                text.textContent = 'Loading YOLO model...';
+                text.textContent = 'Loading AI...';
 
                 try {
                     ort.env.wasm.numThreads = 4;
@@ -588,7 +588,7 @@
                         graphOptimizationLevel: 'all'
                     });
 
-                    console.log('Model loaded. Input:', session.inputNames[0], 'Output:', session.outputNames[0]);
+                    // Model loaded
 
                     status.className = 'api-status connected';
                     status.innerHTML = '<span>●</span> Ready';

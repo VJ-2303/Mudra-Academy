@@ -245,14 +245,9 @@
                     <canvas id="landmark-canvas"></canvas>
                     <img id="ghost-overlay-img" src="" alt="Ghost Overlay">
 
-                    <div id="model-status" class="model-status loading">Loading AI models...</div>
-
                     <div id="match-feedback"
                         style="position: absolute; top: 20px; right: 20px; background: rgba(40, 200, 64, 0.9); color: white; padding: 5px 15px; border-radius: 20px; opacity: 0; transition: opacity 0.3s; font-weight: bold; pointer-events: none;">
                         Match!</div>
-                    <div id="detected-mudra-debug"
-                        style="position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.5); color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 12px; pointer-events: none;">
-                        Initializing...</div>
                 </div>
 
                 <!-- Right: Controls Sidebar -->
@@ -332,10 +327,8 @@
             const prevBtn = document.getElementById('prev-btn');
             const nextBtn = document.getElementById('next-btn');
             const matchFeedback = document.getElementById('match-feedback');
-            const modelStatus = document.getElementById('model-status');
             const landmarkCanvas = document.getElementById('landmark-canvas');
             const landmarkCtx = landmarkCanvas.getContext('2d', { willReadFrequently: true });
-            const debugEl = document.getElementById('detected-mudra-debug');
 
             // Hide voice controls
             const voiceBadge = document.getElementById('voice-indicator-badge');
@@ -368,18 +361,12 @@
             // Init model
             async function initModel() {
                 try {
-                    modelStatus.textContent = 'Loading AI...';
-                    modelStatus.className = 'model-status loading';
                     ort.env.wasm.numThreads = 1;
                     await window.MudraInference.initialize();
                     modelLoaded = true;
-                    modelStatus.textContent = '✓ Ready';
-                    modelStatus.className = 'model-status ready';
                     initCamera();
                 } catch (e) {
-                    console.error('Model error:', e);
-                    modelStatus.textContent = '✗ Error';
-                    modelStatus.className = 'model-status error';
+                    console.error(e);
                 }
             }
 
@@ -414,131 +401,127 @@
                 landmarkCtx.clearRect(0, 0, w, h);
 
                 if (!results.multiHandLandmarks || !results.multiHandLandmarks.length) {
-                    if (debugEl) debugEl.textContent = 'No hand';
-                    matchCounter = 0;
-                    video.style.boxShadow = 'none';
-                    return;
-                }
-
-                const landmarks = results.multiHandLandmarks[0];
-                drawConnectors(landmarkCtx, landmarks, HAND_CONNECTIONS, { color: '#D4A84B', lineWidth: 2 });
-                drawLandmarks(landmarkCtx, landmarks, { color: '#8B2942', lineWidth: 1, radius: 3 });
-
-                if (!modelLoaded) return;
-
-                try {
-                    // Direct hybrid detection
-                    const result = await window.MudraDetection.detectMudraHybrid(landmarks, 'Right', prevLandmarks);
-                    prevLandmarks = landmarks;
-
-                    const detected = result.mudraName;
-                    const conf = result.confidence;
-
-                    if (debugEl) {
-                        debugEl.textContent = detected && detected !== 'Unknown'
-                            ? `${detected} (${Math.round(conf * 100)}%)`
-                            : 'Show mudra...';
+                    if (!results.multiHandLandmarks || !results.multiHandLandmarks.length) {
+                        matchCounter = 0;
+                        video.style.boxShadow = 'none';
+                        return;
                     }
 
-                    if (detected && detected !== 'Unknown' && detected !== 'Stabilizing...') {
-                        checkMatch(detected);
+                    const landmarks = results.multiHandLandmarks[0];
+                    drawConnectors(landmarkCtx, landmarks, HAND_CONNECTIONS, { color: '#D4A84B', lineWidth: 2 });
+                    drawLandmarks(landmarkCtx, landmarks, { color: '#8B2942', lineWidth: 1, radius: 3 });
+
+                    if (!modelLoaded) return;
+
+                    try {
+                        // Direct hybrid detection
+                        const result = await window.MudraDetection.detectMudraHybrid(landmarks, 'Right', prevLandmarks);
+                        prevLandmarks = landmarks;
+
+                        const detected = result.mudraName;
+                        const conf = result.confidence;
+
+
+
+                        if (detected && detected !== 'Unknown' && detected !== 'Stabilizing...') {
+                            checkMatch(detected);
+                        } else {
+                            matchCounter = 0;
+                            video.style.boxShadow = 'none';
+                        }
+                    } catch (e) {
+                        console.error('Detection error:', e);
+                    }
+                }
+
+                // Normalize name for comparison
+                function norm(name) {
+                    if (!name) return '';
+                    if (window.MudraConstants?.normalizeMudraName) {
+                        return window.MudraConstants.normalizeMudraName(name);
+                    }
+                    return name.toLowerCase().replace(' mudra', '').trim();
+                }
+
+                // Check match
+                function checkMatch(detected) {
+                    if (isTransitioning) return;
+
+                    const target = mudras[currentIndex];
+                    if (norm(detected) === norm(target)) {
+                        matchCounter++;
+                        video.style.boxShadow = `0 0 ${15 + matchCounter * 10}px #28c840`;
+                        if (matchCounter >= MATCH_THRESHOLD) triggerSuccess();
                     } else {
                         matchCounter = 0;
                         video.style.boxShadow = 'none';
                     }
-                } catch (e) {
-                    console.error('Detection error:', e);
                 }
-            }
 
-            // Normalize name for comparison
-            function norm(name) {
-                if (!name) return '';
-                if (window.MudraConstants?.normalizeMudraName) {
-                    return window.MudraConstants.normalizeMudraName(name);
-                }
-                return name.toLowerCase().replace(' mudra', '').trim();
-            }
-
-            // Check match
-            function checkMatch(detected) {
-                if (isTransitioning) return;
-
-                const target = mudras[currentIndex];
-                if (norm(detected) === norm(target)) {
-                    matchCounter++;
-                    video.style.boxShadow = `0 0 ${15 + matchCounter * 10}px #28c840`;
-                    if (matchCounter >= MATCH_THRESHOLD) triggerSuccess();
-                } else {
+                // Success
+                function triggerSuccess() {
+                    if (isTransitioning) return;
+                    isTransitioning = true;
                     matchCounter = 0;
-                    video.style.boxShadow = 'none';
+                    video.style.boxShadow = '0 0 50px #28c840';
+                    matchFeedback.style.opacity = 1;
+
+                    setTimeout(() => {
+                        matchFeedback.style.opacity = 0;
+                        video.style.boxShadow = 'none';
+                        nextMudra();
+                        setTimeout(() => { isTransitioning = false; }, 300);
+                    }, 600);
                 }
-            }
 
-            // Success
-            function triggerSuccess() {
-                if (isTransitioning) return;
-                isTransitioning = true;
-                matchCounter = 0;
-                video.style.boxShadow = '0 0 50px #28c840';
-                matchFeedback.style.opacity = 1;
-
-                setTimeout(() => {
-                    matchFeedback.style.opacity = 0;
-                    video.style.boxShadow = 'none';
-                    nextMudra();
-                    setTimeout(() => { isTransitioning = false; }, 300);
-                }, 600);
-            }
-
-            // Display
-            function updateDisplay() {
-                const mudra = mudras[currentIndex];
-                mudraNameEl.textContent = mudra;
-                ghostImg.src = getAssetPath(mudra);
-                ghostImg.style.opacity = ghostEnabled ? 0.35 : 0;
-            }
-
-            function getAssetPath(name) {
-                let f = name;
-                if (window.MudraConstants?.getMudraAssetBase) {
-                    f = window.MudraConstants.getMudraAssetBase(name);
+                // Display
+                function updateDisplay() {
+                    const mudra = mudras[currentIndex];
+                    mudraNameEl.textContent = mudra;
+                    ghostImg.src = getAssetPath(mudra);
+                    ghostImg.style.opacity = ghostEnabled ? 0.35 : 0;
                 }
-                return `../assets/images/no-bg/${f}_no_bg.png`;
-            }
 
-            // Navigation
-            function nextMudra() {
-                currentIndex = (currentIndex + 1) % mudras.length;
-                matchCounter = 0;
-                updateDisplay();
-            }
+                function getAssetPath(name) {
+                    let f = name;
+                    if (window.MudraConstants?.getMudraAssetBase) {
+                        f = window.MudraConstants.getMudraAssetBase(name);
+                    }
+                    return `../assets/images/no-bg/${f}_no_bg.png`;
+                }
 
-            function prevMudra() {
-                currentIndex = (currentIndex - 1 + mudras.length) % mudras.length;
-                matchCounter = 0;
-                updateDisplay();
-            }
+                // Navigation
+                function nextMudra() {
+                    currentIndex = (currentIndex + 1) % mudras.length;
+                    matchCounter = 0;
+                    updateDisplay();
+                }
 
-            function toggleGhost() {
-                ghostEnabled = !ghostEnabled;
-                ghostImg.style.opacity = ghostEnabled ? 0.35 : 0;
-            }
+                function prevMudra() {
+                    currentIndex = (currentIndex - 1 + mudras.length) % mudras.length;
+                    matchCounter = 0;
+                    updateDisplay();
+                }
 
-            // Keyboard
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'ArrowRight') nextMudra();
-                if (e.key === 'ArrowLeft') prevMudra();
-                if (e.key === 'g') toggleGhost();
+                function toggleGhost() {
+                    ghostEnabled = !ghostEnabled;
+                    ghostImg.style.opacity = ghostEnabled ? 0.35 : 0;
+                }
+
+                // Keyboard
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'ArrowRight') nextMudra();
+                    if (e.key === 'ArrowLeft') prevMudra();
+                    if (e.key === 'g') toggleGhost();
+                });
+
+                // Button listeners
+                nextBtn.addEventListener('click', nextMudra);
+                prevBtn.addEventListener('click', prevMudra);
+
+                // Start
+                initModel();
             });
-
-            // Button listeners
-            nextBtn.addEventListener('click', nextMudra);
-            prevBtn.addEventListener('click', prevMudra);
-
-            // Start
-            initModel();
-        });
     </script>
 
     <!-- Chatbot Widget -->
