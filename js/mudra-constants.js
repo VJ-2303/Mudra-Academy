@@ -114,8 +114,23 @@ const MUDRA_NORMALIZATION_MAP = {
     'shanka': 'Shanka',
     'shanka mudra': 'Shanka',
 
-    // Anjali / Samyukta (if needed later)
-    'anjali mudra': 'Anjali'
+    // Anjali / Samyukta (Double Hand)
+    'anjali mudra': 'Anjali',
+
+    // New Double Hand Normalizations
+    'matsya': 'Matsya',
+    'naagabandha': 'Nagabandha', 'nagabandha': 'Nagabandha',
+    'svastika': 'Svastika',
+    'berunda': 'Bherunda', 'bherunda': 'Bherunda',
+    'chakra': 'Chakra',
+    'garuda': 'Garuda',
+    'karkota': 'Karkata', 'karkata': 'Karkata',
+    'katariswastika': 'Kartarisvastika', 'kartarisvastika': 'Kartarisvastika',
+    'katva': 'Katva',
+    'pasha': 'Pasha',
+    'pushpantha': 'Pushpaputa', 'pushpaputa': 'Pushpaputa',
+    'shivalinga': 'Shivalinga',
+    'sankha': 'Shankha', 'shanka': 'Shankha', 'shankha': 'Shankha'
 };
 
 // 3. ASSET MAP (Canonical Name -> Filename Base)
@@ -131,7 +146,13 @@ const MUDRA_ASSET_MAP = {
     'Trishula': 'Trisula',
     'Sarpashirsha': 'Sarpashirsa',
     'Padmakosha': 'Padmakosa',
-    'Hamsapaksha': 'Hamsapaksa'
+    'Hamsapaksha': 'Hamsapaksa',
+
+    // Double Hand Asset Mappings
+    'Pasha': 'Pasa',
+    'Pushpaputa': 'Puspaputa',
+    'Shankha': 'Sankha',
+    'Shivalinga': 'Sivalinga'
 };
 
 /**

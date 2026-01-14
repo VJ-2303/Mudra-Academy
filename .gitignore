@@ -21,3 +21,4 @@ out/
 .webpack/
 
 *.pt
+double.onnx
