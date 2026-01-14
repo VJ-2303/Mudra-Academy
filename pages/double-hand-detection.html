@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,14 +9,17 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="../css/styles.css">
     <link rel="stylesheet" href="../css/pages.css">
 
     <!-- ONNX Runtime Web for ML inference -->
     <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.0/dist/ort.min.js"></script>
 
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%238B2942' width='100' height='100' rx='20'/%3E%3Ctext x='50' y='65' font-size='50' text-anchor='middle' fill='%23D4A84B' font-family='serif'%3EM%3C/text%3E%3C/svg%3E">
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%238B2942' width='100' height='100' rx='20'/%3E%3Ctext x='50' y='65' font-size='50' text-anchor='middle' fill='%23D4A84B' font-family='serif'%3EM%3C/text%3E%3C/svg%3E">
 
     <style>
         .detection-layout {
@@ -25,6 +29,7 @@
             max-width: 1200px;
             margin: 0 auto;
         }
+
         .video-container {
             background: var(--color-dark);
             border-radius: var(--radius-lg);
@@ -32,13 +37,18 @@
             position: relative;
             aspect-ratio: 4/3;
         }
+
         #webcam {
             width: 100%;
             height: 100%;
             object-fit: cover;
             transform: scaleX(-1);
         }
-        #canvas { display: none; }
+
+        #canvas {
+            display: none;
+        }
+
         #overlayCanvas {
             position: absolute;
             top: 0;
@@ -48,6 +58,7 @@
             pointer-events: none;
             transform: scaleX(-1);
         }
+
         .video-placeholder {
             position: absolute;
             inset: 0;
@@ -58,19 +69,23 @@
             background: var(--color-dark);
             color: var(--color-light);
         }
+
         .video-placeholder svg {
             width: 64px;
             height: 64px;
             color: var(--color-secondary);
             margin-bottom: var(--spacing-lg);
         }
+
         .video-placeholder h3 {
             font-family: var(--font-heading);
             margin-bottom: var(--spacing-sm);
         }
+
         .video-placeholder p {
             color: var(--color-gray);
         }
+
         .mudra-label {
             position: absolute;
             bottom: var(--spacing-md);
@@ -79,8 +94,9 @@
             font-size: 1.5rem;
             font-weight: 700;
             color: var(--color-light);
-            text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
         }
+
         .mode-badge {
             position: absolute;
             top: var(--spacing-md);
@@ -92,10 +108,11 @@
             font-size: 0.75rem;
             font-weight: 600;
         }
+
         .loading-overlay {
             position: absolute;
             inset: 0;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0, 0, 0, 0.8);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -103,6 +120,7 @@
             color: var(--color-light);
             z-index: 100;
         }
+
         .loading-spinner {
             width: 48px;
             height: 48px;
@@ -112,19 +130,25 @@
             animation: spin 1s linear infinite;
             margin-bottom: var(--spacing-md);
         }
+
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
+
         .loading-text {
             font-size: 1rem;
             color: var(--color-secondary);
         }
+
         .controls {
             display: flex;
             gap: var(--spacing-md);
             justify-content: center;
             margin-top: var(--spacing-lg);
         }
+
         .control-btn {
             display: inline-flex;
             align-items: center;
@@ -138,45 +162,58 @@
             cursor: pointer;
             transition: all var(--transition-base);
         }
+
         .control-btn svg {
             width: 20px;
             height: 20px;
         }
+
         .btn-start {
             background: var(--color-primary);
             color: var(--color-light);
         }
+
         .btn-start:hover {
             background: var(--color-primary-dark);
             box-shadow: var(--shadow-primary);
         }
+
         .btn-start:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
+
         .btn-stop {
             background: #ef4444;
             color: var(--color-light);
         }
-        .btn-stop:hover { background: #dc2626; }
+
+        .btn-stop:hover {
+            background: #dc2626;
+        }
+
         .btn-reset {
             background: var(--color-light);
             color: var(--color-dark);
             border: 2px solid var(--color-gray-light);
         }
+
         .btn-reset:hover {
             border-color: var(--color-primary);
             color: var(--color-primary);
         }
+
         .sidebar-card {
             background: var(--color-light);
             border-radius: var(--radius-lg);
             padding: var(--spacing-lg);
             border: 1px solid rgba(139, 41, 66, 0.1);
         }
-        .sidebar-card + .sidebar-card {
+
+        .sidebar-card+.sidebar-card {
             margin-top: var(--spacing-lg);
         }
+
         .sidebar-card h3 {
             font-family: var(--font-heading);
             font-size: 1.1rem;
@@ -186,11 +223,13 @@
             align-items: center;
             gap: var(--spacing-sm);
         }
+
         .sidebar-card h3 svg {
             width: 18px;
             height: 18px;
             color: var(--color-secondary);
         }
+
         .api-status {
             display: flex;
             align-items: center;
@@ -200,48 +239,69 @@
             border-radius: var(--radius-md);
             font-size: 0.85rem;
         }
-        .api-status.connected { background: #dcfce7; color: #166534; }
-        .api-status.loading { background: #fef3c7; color: #92400e; }
-        .api-status.error { background: #fee2e2; color: #991b1b; }
+
+        .api-status.connected {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .api-status.loading {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .api-status.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
         .current-mudra-display {
             text-align: center;
             padding: var(--spacing-md) 0;
         }
+
         .current-mudra-display h4 {
             font-family: var(--font-heading);
             font-size: 1.25rem;
             color: var(--color-dark);
             margin-bottom: var(--spacing-xs);
         }
+
         .current-mudra-display p {
             color: var(--color-gray);
             font-size: 0.9rem;
         }
+
         .stats-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: var(--spacing-md);
         }
+
         .stat-box {
             text-align: center;
             padding: var(--spacing-md);
             background: var(--color-light-warm);
             border-radius: var(--radius-md);
         }
+
         .stat-value {
             font-size: 1.5rem;
             font-weight: 700;
             color: var(--color-primary);
         }
+
         .stat-label {
             font-size: 0.75rem;
             color: var(--color-gray);
             margin-top: var(--spacing-xs);
         }
+
         .history-list {
             max-height: 200px;
             overflow-y: auto;
         }
+
         .history-item {
             display: flex;
             align-items: center;
@@ -249,7 +309,11 @@
             padding: var(--spacing-sm) 0;
             border-bottom: 1px solid var(--color-gray-light);
         }
-        .history-item:last-child { border-bottom: none; }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
         .history-abbr {
             width: 32px;
             height: 32px;
@@ -262,16 +326,34 @@
             font-size: 0.75rem;
             color: var(--color-primary);
         }
-        .history-info { flex: 1; }
-        .history-name { font-weight: 500; font-size: 0.9rem; }
-        .history-time { font-size: 0.75rem; color: var(--color-gray); }
-        .history-conf { font-size: 0.85rem; font-weight: 600; color: var(--color-secondary); }
+
+        .history-info {
+            flex: 1;
+        }
+
+        .history-name {
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .history-time {
+            font-size: 0.75rem;
+            color: var(--color-gray);
+        }
+
+        .history-conf {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--color-secondary);
+        }
+
         .empty-state {
             text-align: center;
             color: var(--color-gray);
             padding: var(--spacing-lg) 0;
             font-size: 0.9rem;
         }
+
         @media (max-width: 900px) {
             .detection-layout {
                 grid-template-columns: 1fr;
@@ -279,14 +361,15 @@
         }
     </style>
 </head>
+
 <body>
     <nav class="navbar scrolled">
         <div class="container">
             <a href="../index.html" class="logo">
                 <div class="logo-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
-                        <path d="M12 6v6l4 2"/>
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
+                        <path d="M12 6v6l4 2" />
                     </svg>
                 </div>
                 <span class="logo-text">Mudra Academy</span>
@@ -318,8 +401,9 @@
                         <div class="mode-badge">Double Hand Mode</div>
                         <div class="video-placeholder" id="placeholder">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                                <circle cx="12" cy="13" r="4"/>
+                                <path
+                                    d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                                <circle cx="12" cy="13" r="4" />
                             </svg>
                             <h3>Camera Ready</h3>
                             <p>Click Start to begin double-hand detection</p>
@@ -333,20 +417,20 @@
                     <div class="controls">
                         <button class="control-btn btn-start" id="startBtn" disabled>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polygon points="5 3 19 12 5 21 5 3"/>
+                                <polygon points="5 3 19 12 5 21 5 3" />
                             </svg>
                             Start
                         </button>
                         <button class="control-btn btn-stop" id="stopBtn" style="display:none;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <rect x="6" y="6" width="12" height="12"/>
+                                <rect x="6" y="6" width="12" height="12" />
                             </svg>
                             Stop
                         </button>
                         <button class="control-btn btn-reset" id="resetBtn">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="1 4 1 10 7 10"/>
-                                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                                <polyline points="1 4 1 10 7 10" />
+                                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
                             </svg>
                             Reset
                         </button>
@@ -356,8 +440,8 @@
                     <div class="sidebar-card">
                         <h3>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                                <polyline points="22 4 12 14.01 9 11.01"/>
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                <polyline points="22 4 12 14.01 9 11.01" />
                             </svg>
                             System Status
                         </h3>
@@ -368,8 +452,8 @@
                     <div class="sidebar-card">
                         <h3>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"/>
-                                <circle cx="12" cy="12" r="3"/>
+                                <circle cx="12" cy="12" r="10" />
+                                <circle cx="12" cy="12" r="3" />
                             </svg>
                             Current Mudra
                         </h3>
@@ -381,9 +465,9 @@
                     <div class="sidebar-card">
                         <h3>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="18" y1="20" x2="18" y2="10"/>
-                                <line x1="12" y1="20" x2="12" y2="4"/>
-                                <line x1="6" y1="20" x2="6" y2="14"/>
+                                <line x1="18" y1="20" x2="18" y2="10" />
+                                <line x1="12" y1="20" x2="12" y2="4" />
+                                <line x1="6" y1="20" x2="6" y2="14" />
                             </svg>
                             Session
                         </h3>
@@ -401,8 +485,8 @@
                     <div class="sidebar-card">
                         <h3>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"/>
-                                <polyline points="12 6 12 12 16 14"/>
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="12 6 12 12 16 14" />
                             </svg>
                             Detected Mudras
                         </h3>
@@ -433,418 +517,284 @@
     </footer>
 
     <script src="../js/main.js"></script>
-    
+    <script src="../js/mudra-constants.js"></script>
+    <script src="../js/mudra-detection.js"></script>
+
     <script>
-    (function() {
-        'use strict';
-        
-        // YOLO Configuration
-        const MODEL_PATH = '../ml/models/kkpv_web.onnx';
-        // Class names MUST match the model training order
-        const YOLO_CLASSES = ['Anjali', 'Naagabandha', 'Chakra', 'Karkota', 'Kartariswastika', 'Pasha', 'Shanka', 'Shivalinga'];
-        const CONF_THRESHOLD = 0.25;
-        
-        // ============================================================
-        // PERFORMANCE OPTIMIZATION CONFIGURATION
-        // ============================================================
-        const DETECT_INTERVAL_ACTIVE = 150;   // ~6-7 FPS when detecting
-        const DETECT_INTERVAL_STABLE = 300;   // ~3 FPS when mudra is stable (saves CPU)
-        const STABLE_FRAMES_THRESHOLD = 5;    // Frames of same detection before slowing
-        
-        // Double-hand mudra meanings
-        const meanings = {
-            'Anjali': 'Salutation - Prayer, greeting, respect',
-            'Naagabandha': 'Serpent bond - Intertwined snakes',
-            'Chakra': 'Wheel/Disc - Vishnu\'s weapon',
-            'Karkota': 'Crab - Pincer movement',
-            'Kartariswastika': 'Crossed scissors - Auspicious cross',
-            'Pasha': 'Noose - Binding, rope',
-            'Shanka': 'Conch shell - Sacred shell',
-            'Shivalinga': 'Shiva symbol - Divine representation'
-        };
-        
-        // State
-        let running = false;
-        let modelLoaded = false;
-        let yoloSession = null;
-        let video, canvas, ctx, overlayCanvas, overlayCtx;
-        let sessionTimer, startTime;
-        let uniqueMap = {}, lastMudra = null;
-        let lastDetectTime = 0;
-        
-        // Performance optimization state
-        let stableDetectionCount = 0;
-        let currentDetectInterval = DETECT_INTERVAL_ACTIVE;
-        
-        // Reusable buffers to reduce garbage collection
-        let _preprocessCanvas = null;
-        let _preprocessCtx = null;
-        let _tensorBuffer = null;
+        /**
+         * DOUBLE HAND DETECTION - CLEAN REWRITE
+         * Optimized for Speed (25+ FPS) and Accuracy
+         */
+        (function () {
+            'use strict';
 
-        const $ = (id) => document.getElementById(id);
-        
-        // Get or create reusable preprocessing resources
-        function getPreprocessResources() {
-            if (!_preprocessCanvas) {
-                _preprocessCanvas = document.createElement('canvas');
-                _preprocessCanvas.width = 640;
-                _preprocessCanvas.height = 640;
-                _preprocessCtx = _preprocessCanvas.getContext('2d', { willReadFrequently: true });
-            }
-            if (!_tensorBuffer) {
-                _tensorBuffer = new Float32Array(3 * 640 * 640);
-            }
-            return { canvas: _preprocessCanvas, ctx: _preprocessCtx, tensor: _tensorBuffer };
-        }
+            // =================================================================
+            // CONFIGURATION - SIMPLE AND FAST
+            // =================================================================
+            const MODEL_PATH = '../ml/models/new/best.onnx';
+            const CLASSES = ['Anjali', 'MATSYA', 'Naagabandha', 'SVASTIKA', 'berunda', 'chakra', 'garuda', 'karkota', 'katariswastika', 'pasha', 'pushpantha', 'shanka', 'shivalinga'];
+            const CONF_THRESHOLD = 0.35;  // Detection threshold
 
-        // Initialize YOLO model
-        async function initializeModel() {
-            const loadingOverlay = $('loadingOverlay');
-            const loadingText = $('loadingText');
-            const statusIndicator = $('statusIndicator');
-            const startBtn = $('startBtn');
-            
-            loadingOverlay.style.display = 'flex';
-            
-            try {
-                loadingText.textContent = 'Loading YOLOv8 model (~12MB)...';
-                
-                // Configure ONNX Runtime for single-threaded operation (avoids COOP/COEP issues)
-                if (typeof ort !== 'undefined') {
-                    ort.env.wasm.numThreads = 1;
+            const MEANINGS = {
+                'Anjali': 'Salutation - Prayer, greeting',
+                'MATSYA': 'Fish - Vishnu avatar',
+                'Naagabandha': 'Serpent bond',
+                'SVASTIKA': 'Auspicious symbol',
+                'berunda': 'Two-headed bird',
+                'chakra': 'Wheel/Disc',
+                'garuda': 'Divine eagle',
+                'karkota': 'Crab',
+                'katariswastika': 'Crossed scissors',
+                'pasha': 'Noose',
+                'pushpantha': 'Flower offering',
+                'shanka': 'Conch shell',
+                'shivalinga': 'Shiva symbol'
+            };
+
+            // =================================================================
+            // STATE - MINIMAL
+            // =================================================================
+            let session = null;
+            let video = null;
+            let running = false;
+            let sessionTimer = null;
+            let startTime = 0;
+            let uniqueMap = {};
+            let lastMudra = null;
+
+            // Pre-allocated buffer for speed
+            const tensorBuffer = new Float32Array(3 * 640 * 640);
+            let prepCanvas = null, prepCtx = null;
+
+            const $ = id => document.getElementById(id);
+
+            // =================================================================
+            // MODEL INIT
+            // =================================================================
+            async function initModel() {
+                const overlay = $('loadingOverlay');
+                const text = $('loadingText');
+                const status = $('statusIndicator');
+
+                overlay.style.display = 'flex';
+                text.textContent = 'Loading YOLO model...';
+
+                try {
+                    ort.env.wasm.numThreads = 4;
+                    ort.env.wasm.simd = true;
+
+                    session = await ort.InferenceSession.create(MODEL_PATH, {
+                        executionProviders: ['wasm'],
+                        graphOptimizationLevel: 'all'
+                    });
+
+                    console.log('Model loaded. Input:', session.inputNames[0], 'Output:', session.outputNames[0]);
+
+                    status.className = 'api-status connected';
+                    status.innerHTML = '<span>●</span> Ready';
+                    $('startBtn').disabled = false;
+
+                } catch (e) {
+                    console.error('Model error:', e);
+                    status.className = 'api-status error';
+                    status.innerHTML = '<span>●</span> Error';
+                } finally {
+                    overlay.style.display = 'none';
                 }
-                
-                yoloSession = await ort.InferenceSession.create(MODEL_PATH, {
-                    executionProviders: ['wasm', 'cpu'],
-                    graphOptimizationLevel: 'all'
-                });
-                
-                modelLoaded = true;
-                statusIndicator.className = 'api-status connected';
-                statusIndicator.innerHTML = '<span>●</span> YOLO model loaded';
-                startBtn.disabled = false;
-                
-            } catch (error) {
-                statusIndicator.className = 'api-status error';
-                statusIndicator.innerHTML = '<span>●</span> Error loading model';
-            } finally {
-                loadingOverlay.style.display = 'none';
             }
-        }
 
-        // Preprocess image for YOLO (OPTIMIZED - reuses buffers)
-        function preprocessImage(video) {
-            // Use reusable resources instead of creating new ones
-            const { ctx: prepCtx, tensor } = getPreprocessResources();
-            
-            // Draw video frame to reusable canvas
-            prepCtx.drawImage(video, 0, 0, 640, 640);
-            const imageData = prepCtx.getImageData(0, 0, 640, 640);
-            const data = imageData.data;
-            
-            // OPTIMIZED: Single loop instead of three separate loops
-            const pixelCount = 640 * 640;
-            for (let i = 0; i < pixelCount; i++) {
-                const base = i * 4;
-                tensor[i] = data[base] / 255.0;                    // Red
-                tensor[pixelCount + i] = data[base + 1] / 255.0;   // Green
-                tensor[pixelCount * 2 + i] = data[base + 2] / 255.0; // Blue
+            // =================================================================
+            // PREPROCESS - FAST
+            // =================================================================
+            function preprocess() {
+                if (!prepCanvas) {
+                    prepCanvas = document.createElement('canvas');
+                    prepCanvas.width = 640;
+                    prepCanvas.height = 640;
+                    prepCtx = prepCanvas.getContext('2d', { willReadFrequently: true });
+                }
+
+                prepCtx.drawImage(video, 0, 0, 640, 640);
+                const { data } = prepCtx.getImageData(0, 0, 640, 640);
+
+                const pixels = 640 * 640;
+                for (let i = 0; i < pixels; i++) {
+                    const idx = i << 2;
+                    tensorBuffer[i] = data[idx] / 255;
+                    tensorBuffer[pixels + i] = data[idx + 1] / 255;
+                    tensorBuffer[pixels * 2 + i] = data[idx + 2] / 255;
+                }
+
+                return new ort.Tensor('float32', tensorBuffer, [1, 3, 640, 640]);
             }
-            
-            return tensor;
-        }
 
-        // Run YOLO inference
-        async function runYOLO() {
-            if (!yoloSession || !running) return null;
-            
-            try {
-                // Preprocess
-                const inputTensor = preprocessImage(video);
-                const tensor = new ort.Tensor('float32', inputTensor, [1, 3, 640, 640]);
-                
-                // Run inference
-                const feeds = { images: tensor };
-                const results = await yoloSession.run(feeds);
-                
-                // Get output (shape: [1, 12, 8400] for 8 classes + 4 box coords)
-                const output = results[yoloSession.outputNames[0]];
-                const outputData = output.data;
-                const numDetections = 8400;
-                const numClasses = 8;
-                
+            // =================================================================
+            // DETECT - DIRECT, NO EXTRA LOGIC
+            // =================================================================
+            async function detect() {
+                if (!session || !video || video.readyState < 2) return null;
+
+                const tensor = preprocess();
+                const feeds = {};
+                feeds[session.inputNames[0]] = tensor;
+
+                const results = await session.run(feeds);
+                const outputTensor = results[session.outputNames[0]];
+                const output = outputTensor.data;
+
+                const numClasses = outputTensor.dims[1] - 4;
+                const N = outputTensor.dims[2];
+
+                let bestScore = 0, bestClass = 0;
+
                 // Find best detection
-                let bestScore = 0;
-                let bestClass = -1;
-                let bestBox = null;
-                
-                for (let i = 0; i < numDetections; i++) {
-                    // Box coords: [x, y, w, h] at indices 0-3
-                    const x = outputData[0 * numDetections + i];
-                    const y = outputData[1 * numDetections + i];
-                    const w = outputData[2 * numDetections + i];
-                    const h = outputData[3 * numDetections + i];
-                    
-                    // Class scores at indices 4-11
-                    let maxClassScore = 0;
-                    let maxClassIdx = 0;
-                    
+                for (let i = 0; i < N; i++) {
                     for (let c = 0; c < numClasses; c++) {
-                        const score = outputData[(4 + c) * numDetections + i];
-                        if (score > maxClassScore) {
-                            maxClassScore = score;
-                            maxClassIdx = c;
+                        const score = output[(4 + c) * N + i];
+                        if (score > bestScore) {
+                            bestScore = score;
+                            bestClass = c;
                         }
                     }
-                    
-                    if (maxClassScore > bestScore) {
-                        bestScore = maxClassScore;
-                        bestClass = maxClassIdx;
-                        bestBox = { x, y, w, h };
+                }
+
+                if (bestScore < CONF_THRESHOLD) return null;
+
+                return { name: CLASSES[bestClass], conf: bestScore };
+            }
+
+            // =================================================================
+            // UI UPDATE - IMMEDIATE
+            // =================================================================
+            function updateUI(name, conf) {
+                const label = $('mudraName');
+                const nameEl = $('currentName');
+                const meaningEl = $('currentMeaning');
+
+                if (!name) {
+                    label.textContent = 'Show mudra...';
+                    label.style.color = '#888';
+                    nameEl.textContent = '--';
+                    meaningEl.textContent = 'Waiting';
+                    return;
+                }
+
+                label.textContent = `${name} (${Math.round(conf * 100)}%)`;
+                label.style.color = '#D4A84B';
+                nameEl.textContent = name;
+                meaningEl.textContent = MEANINGS[name] || 'Double-hand mudra';
+
+                // Track unique + history
+                if (name !== lastMudra) {
+                    lastMudra = name;
+                    if (!uniqueMap[name]) {
+                        uniqueMap[name] = true;
+                        $('uniqueCount').textContent = Object.keys(uniqueMap).length;
                     }
-                }
-                
-                // Apply confidence threshold
-                if (bestScore >= CONF_THRESHOLD && bestClass >= 0) {
-                    return {
-                        className: YOLO_CLASSES[bestClass],
-                        confidence: bestScore,
-                        box: bestBox
-                    };
-                }
-                
-                return null;
-                
-            } catch (error) {
-                return null;
-            }
-        }
-
-        // Draw detection overlay
-        function drawOverlay(detection) {
-            const ow = overlayCanvas.width;
-            const oh = overlayCanvas.height;
-            
-            overlayCtx.clearRect(0, 0, ow, oh);
-            
-            if (!detection || !detection.box) return;
-            
-            // Scale box coordinates to overlay canvas
-            const scaleX = ow / 640;
-            const scaleY = oh / 640;
-            
-            const x = detection.box.x * scaleX;
-            const y = detection.box.y * scaleY;
-            const w = detection.box.w * scaleX;
-            const h = detection.box.h * scaleY;
-            
-            // Convert center-width-height to top-left corner
-            const x1 = x - w / 2;
-            const y1 = y - h / 2;
-            
-            // Draw bounding box
-            overlayCtx.strokeStyle = '#D4A84B';
-            overlayCtx.lineWidth = 3;
-            overlayCtx.strokeRect(x1, y1, w, h);
-            
-            // Draw label background
-            const label = `${detection.className} ${(detection.confidence * 100).toFixed(0)}%`;
-            overlayCtx.font = 'bold 16px Inter, sans-serif';
-            const textWidth = overlayCtx.measureText(label).width;
-            
-            overlayCtx.fillStyle = '#D4A84B';
-            overlayCtx.fillRect(x1, y1 - 24, textWidth + 16, 24);
-            
-            // Draw label text
-            overlayCtx.fillStyle = '#1a1a2e';
-            overlayCtx.fillText(label, x1 + 8, y1 - 6);
-        }
-
-        // Detection loop (OPTIMIZED with adaptive interval)
-        async function detectLoop() {
-            if (!running || !modelLoaded) return;
-            
-            const now = Date.now();
-            if (now - lastDetectTime >= currentDetectInterval) {
-                lastDetectTime = now;
-                
-                const detection = await runYOLO();
-                
-                if (detection) {
-                    // Check if detection is stable (same as last)
-                    if (detection.className === lastMudra) {
-                        stableDetectionCount++;
-                        // Slow down detection after stable frames (saves CPU)
-                        if (stableDetectionCount >= STABLE_FRAMES_THRESHOLD) {
-                            currentDetectInterval = DETECT_INTERVAL_STABLE;
-                        }
-                    } else {
-                        // New detection - reset to active rate
-                        stableDetectionCount = 0;
-                        currentDetectInterval = DETECT_INTERVAL_ACTIVE;
-                    }
-                    
-                    show(detection.className, detection.confidence);
-                    drawOverlay(detection);
-                } else {
-                    // No detection - reset
-                    stableDetectionCount = 0;
-                    currentDetectInterval = DETECT_INTERVAL_ACTIVE;
-                    show(null, 0);
-                    overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+                    addHistory(name, conf);
                 }
             }
-            
-            if (running) {
-                requestAnimationFrame(detectLoop);
+
+            function addHistory(name, conf) {
+                const list = $('historyList');
+                const empty = list.querySelector('.empty-state');
+                if (empty) empty.remove();
+
+                const item = document.createElement('div');
+                item.className = 'history-item';
+                item.innerHTML = `
+                    <div class="history-abbr">${name.substring(0, 2).toUpperCase()}</div>
+                    <div class="history-info">
+                        <div class="history-name">${name}</div>
+                        <div class="history-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                    </div>
+                    <div class="history-conf">${Math.round(conf * 100)}%</div>
+                `;
+                list.insertBefore(item, list.firstChild);
             }
-        }
 
-        function show(name, conf) {
-            const label = $('mudraName');
-            const currentName = $('currentName');
-            const currentMeaning = $('currentMeaning');
+            // =================================================================
+            // DETECTION LOOP - ULTRA SIMPLE
+            // =================================================================
+            async function loop() {
+                if (!running) return;
 
-            if (!name) {
-                label.textContent = 'Detecting...';
-                label.style.color = '#fff';
-                currentName.textContent = '--';
-                currentMeaning.textContent = 'Waiting for detection';
-                return;
-            }
-
-            const confText = conf > 0 ? ` (${(conf * 100).toFixed(0)}%)` : '';
-
-            label.textContent = name + confText;
-            label.style.color = '#D4A84B';
-
-            currentName.textContent = name;
-            currentMeaning.textContent = meanings[name] || 'Traditional double-hand mudra';
-
-            if (name !== lastMudra) {
-                lastMudra = name;
-                if (!uniqueMap[name]) {
-                    uniqueMap[name] = true;
-                    $('uniqueCount').textContent = Object.keys(uniqueMap).length;
+                try {
+                    const result = await detect();
+                    updateUI(result?.name || null, result?.conf || 0);
+                } catch (e) {
+                    // Silent - just retry next frame
                 }
-                addHistory(name, conf);
-            }
-        }
 
-        function addHistory(name, conf) {
-            const list = $('historyList');
-            const empty = list.querySelector('.empty-state');
-            if (empty) empty.remove();
-
-            const abbr = name.substring(0, 2).toUpperCase();
-            const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-            const item = document.createElement('div');
-            item.className = 'history-item';
-            item.innerHTML = `
-                <div class="history-abbr">${abbr}</div>
-                <div class="history-info">
-                    <div class="history-name">${name}</div>
-                    <div class="history-time">${timeStr} · YOLO</div>
-                </div>
-                <div class="history-conf">${conf > 0 ? (conf * 100).toFixed(0) + '%' : '--'}</div>
-            `;
-
-            list.insertBefore(item, list.firstChild);
-        }
-
-        function updateTime() {
-            const elapsed = Math.floor((Date.now() - startTime) / 1000);
-            const mins = Math.floor(elapsed / 60);
-            const secs = elapsed % 60;
-            $('duration').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
-        }
-
-        function start() {
-            if (!modelLoaded) {
-                alert('YOLO model is still loading. Please wait.');
-                return;
+                if (running) requestAnimationFrame(loop);
             }
 
-            video = $('webcam');
-            canvas = $('canvas');
-            ctx = canvas.getContext('2d');
-            canvas.width = 640;
-            canvas.height = 640;
+            // =================================================================
+            // CONTROLS
+            // =================================================================
+            function start() {
+                if (!session) { alert('Model loading...'); return; }
 
-            overlayCanvas = $('overlayCanvas');
-            overlayCtx = overlayCanvas.getContext('2d');
-            const container = overlayCanvas.parentElement;
-            overlayCanvas.width = container.offsetWidth;
-            overlayCanvas.height = container.offsetHeight;
+                video = $('webcam');
 
-            navigator.mediaDevices.getUserMedia({ 
-                video: { 
-                    width: { ideal: 640 },
-                    height: { ideal: 480 }
-                } 
-            })
-            .then((stream) => {
-                video.srcObject = stream;
-                video.play();
-                
-                $('placeholder').style.display = 'none';
-                $('startBtn').style.display = 'none';
-                $('stopBtn').style.display = 'inline-flex';
-                $('mudraName').style.display = 'block';
-                
-                running = true;
-                startTime = Date.now();
-                sessionTimer = setInterval(updateTime, 1000);
-                
-                // Start detection loop
-                requestAnimationFrame(detectLoop);
-            })
-            .catch((err) => {
-                alert('Could not access camera. Please ensure camera permissions are granted.');
-            });
-        }
+                navigator.mediaDevices.getUserMedia({
+                    video: { width: { ideal: 640 }, height: { ideal: 480 } }
+                }).then(stream => {
+                    video.srcObject = stream;
+                    video.play();
 
-        function stop() {
-            running = false;
-            clearInterval(sessionTimer);
+                    $('placeholder').style.display = 'none';
+                    $('startBtn').style.display = 'none';
+                    $('stopBtn').style.display = 'inline-flex';
+                    $('mudraName').style.display = 'block';
 
-            if (video && video.srcObject) {
-                video.srcObject.getTracks().forEach(track => track.stop());
+                    startTime = Date.now();
+                    sessionTimer = setInterval(() => {
+                        const s = Math.floor((Date.now() - startTime) / 1000);
+                        $('duration').textContent = `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
+                    }, 1000);
+
+                    running = true;
+                    requestAnimationFrame(loop);
+
+                }).catch(err => alert('Camera: ' + err.message));
             }
 
-            $('placeholder').style.display = 'flex';
-            $('startBtn').style.display = 'inline-flex';
-            $('stopBtn').style.display = 'none';
-            $('mudraName').style.display = 'none';
+            function stop() {
+                running = false;
+                clearInterval(sessionTimer);
+                if (video?.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
 
-            if (overlayCtx) {
-                overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+                $('placeholder').style.display = 'flex';
+                $('startBtn').style.display = 'inline-flex';
+                $('stopBtn').style.display = 'none';
+                $('mudraName').style.display = 'none';
             }
-        }
 
-        function reset() {
-            stop();
-            uniqueMap = {};
-            lastMudra = null;
-            $('uniqueCount').textContent = '0';
-            $('duration').textContent = '0:00';
-            $('historyList').innerHTML = '<div class="empty-state">No mudras detected yet</div>';
-            $('currentName').textContent = '--';
-            $('currentMeaning').textContent = 'Waiting for detection';
-        }
+            function reset() {
+                stop();
+                uniqueMap = {};
+                lastMudra = null;
+                $('uniqueCount').textContent = '0';
+                $('duration').textContent = '0:00';
+                $('historyList').innerHTML = '<div class="empty-state">No mudras detected yet</div>';
+                $('currentName').textContent = '--';
+                $('currentMeaning').textContent = 'Waiting for detection';
+            }
 
-        // Event listeners
-        $('startBtn').addEventListener('click', start);
-        $('stopBtn').addEventListener('click', stop);
-        $('resetBtn').addEventListener('click', reset);
+            // =================================================================
+            // INIT
+            // =================================================================
+            $('startBtn').addEventListener('click', start);
+            $('stopBtn').addEventListener('click', stop);
+            $('resetBtn').addEventListener('click', reset);
+            window.addEventListener('load', initModel);
 
-        // Initialize on page load
-        window.addEventListener('load', initializeModel);
-    })();
+        })();
     </script>
-    
+
     <!-- Chatbot Widget -->
     <script src="../js/chat-widget.js"></script>
 </body>
+
 </html>

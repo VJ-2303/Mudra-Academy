@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,18 +9,23 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="../css/styles.css">
     <link rel="stylesheet" href="../css/pages.css">
 
     <!-- MediaPipe Hands for client-side landmark detection -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.min.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.min.js" crossorigin="anonymous"></script>
-    
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.min.js"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.min.js"
+        crossorigin="anonymous"></script>
+
     <!-- ONNX Runtime Web for ML inference -->
     <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.0/dist/ort.min.js"></script>
 
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%238B2942' width='100' height='100' rx='20'/%3E%3Ctext x='50' y='65' font-size='50' text-anchor='middle' fill='%23D4A84B' font-family='serif'%3EM%3C/text%3E%3C/svg%3E">
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%238B2942' width='100' height='100' rx='20'/%3E%3Ctext x='50' y='65' font-size='50' text-anchor='middle' fill='%23D4A84B' font-family='serif'%3EM%3C/text%3E%3C/svg%3E">
 
     <style>
         .detection-layout {
@@ -29,6 +35,7 @@
             max-width: 1200px;
             margin: 0 auto;
         }
+
         .video-container {
             background: var(--color-dark);
             border-radius: var(--radius-lg);
@@ -36,13 +43,18 @@
             position: relative;
             aspect-ratio: 4/3;
         }
+
         #webcam {
             width: 100%;
             height: 100%;
             object-fit: cover;
             transform: scaleX(-1);
         }
-        #canvas { display: none; }
+
+        #canvas {
+            display: none;
+        }
+
         #landmarkCanvas {
             position: absolute;
             top: 0;
@@ -52,6 +64,7 @@
             pointer-events: none;
             transform: scaleX(-1);
         }
+
         .video-placeholder {
             position: absolute;
             inset: 0;
@@ -62,19 +75,23 @@
             background: var(--color-dark);
             color: var(--color-light);
         }
+
         .video-placeholder svg {
             width: 64px;
             height: 64px;
             color: var(--color-secondary);
             margin-bottom: var(--spacing-lg);
         }
+
         .video-placeholder h3 {
             font-family: var(--font-heading);
             margin-bottom: var(--spacing-sm);
         }
+
         .video-placeholder p {
             color: var(--color-gray);
         }
+
         .mudra-label {
             position: absolute;
             bottom: var(--spacing-md);
@@ -83,12 +100,13 @@
             font-size: 1.5rem;
             font-weight: 700;
             color: var(--color-light);
-            text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
         }
+
         .loading-overlay {
             position: absolute;
             inset: 0;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0, 0, 0, 0.8);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -96,6 +114,7 @@
             color: var(--color-light);
             z-index: 100;
         }
+
         .loading-spinner {
             width: 48px;
             height: 48px;
@@ -105,19 +124,25 @@
             animation: spin 1s linear infinite;
             margin-bottom: var(--spacing-md);
         }
+
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
+
         .loading-text {
             font-size: 1rem;
             color: var(--color-secondary);
         }
+
         .controls {
             display: flex;
             gap: var(--spacing-md);
             justify-content: center;
             margin-top: var(--spacing-lg);
         }
+
         .control-btn {
             display: inline-flex;
             align-items: center;
@@ -131,45 +156,58 @@
             cursor: pointer;
             transition: all var(--transition-base);
         }
+
         .control-btn svg {
             width: 20px;
             height: 20px;
         }
+
         .btn-start {
             background: var(--color-primary);
             color: var(--color-light);
         }
+
         .btn-start:hover {
             background: var(--color-primary-dark);
             box-shadow: var(--shadow-primary);
         }
+
         .btn-start:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
+
         .btn-stop {
             background: #ef4444;
             color: var(--color-light);
         }
-        .btn-stop:hover { background: #dc2626; }
+
+        .btn-stop:hover {
+            background: #dc2626;
+        }
+
         .btn-reset {
             background: var(--color-light);
             color: var(--color-dark);
             border: 2px solid var(--color-gray-light);
         }
+
         .btn-reset:hover {
             border-color: var(--color-primary);
             color: var(--color-primary);
         }
+
         .sidebar-card {
             background: var(--color-light);
             border-radius: var(--radius-lg);
             padding: var(--spacing-lg);
             border: 1px solid rgba(139, 41, 66, 0.1);
         }
-        .sidebar-card + .sidebar-card {
+
+        .sidebar-card+.sidebar-card {
             margin-top: var(--spacing-lg);
         }
+
         .sidebar-card h3 {
             font-family: var(--font-heading);
             font-size: 1.1rem;
@@ -179,11 +217,13 @@
             align-items: center;
             gap: var(--spacing-sm);
         }
+
         .sidebar-card h3 svg {
             width: 18px;
             height: 18px;
             color: var(--color-secondary);
         }
+
         .api-status {
             display: flex;
             align-items: center;
@@ -193,48 +233,69 @@
             border-radius: var(--radius-md);
             font-size: 0.85rem;
         }
-        .api-status.connected { background: #dcfce7; color: #166534; }
-        .api-status.loading { background: #fef3c7; color: #92400e; }
-        .api-status.error { background: #fee2e2; color: #991b1b; }
+
+        .api-status.connected {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .api-status.loading {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .api-status.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
         .current-mudra-display {
             text-align: center;
             padding: var(--spacing-md) 0;
         }
+
         .current-mudra-display h4 {
             font-family: var(--font-heading);
             font-size: 1.25rem;
             color: var(--color-dark);
             margin-bottom: var(--spacing-xs);
         }
+
         .current-mudra-display p {
             color: var(--color-gray);
             font-size: 0.9rem;
         }
+
         .stats-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: var(--spacing-md);
         }
+
         .stat-box {
             text-align: center;
             padding: var(--spacing-md);
             background: var(--color-light-warm);
             border-radius: var(--radius-md);
         }
+
         .stat-value {
             font-size: 1.5rem;
             font-weight: 700;
             color: var(--color-primary);
         }
+
         .stat-label {
             font-size: 0.75rem;
             color: var(--color-gray);
             margin-top: var(--spacing-xs);
         }
+
         .history-list {
             max-height: 200px;
             overflow-y: auto;
         }
+
         .history-item {
             display: flex;
             align-items: center;
@@ -242,7 +303,11 @@
             padding: var(--spacing-sm) 0;
             border-bottom: 1px solid var(--color-gray-light);
         }
-        .history-item:last-child { border-bottom: none; }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
         .history-abbr {
             width: 32px;
             height: 32px;
@@ -255,16 +320,34 @@
             font-size: 0.75rem;
             color: var(--color-primary);
         }
-        .history-info { flex: 1; }
-        .history-name { font-weight: 500; font-size: 0.9rem; }
-        .history-time { font-size: 0.75rem; color: var(--color-gray); }
-        .history-conf { font-size: 0.85rem; font-weight: 600; color: var(--color-secondary); }
+
+        .history-info {
+            flex: 1;
+        }
+
+        .history-name {
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .history-time {
+            font-size: 0.75rem;
+            color: var(--color-gray);
+        }
+
+        .history-conf {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--color-secondary);
+        }
+
         .empty-state {
             text-align: center;
             color: var(--color-gray);
             padding: var(--spacing-lg) 0;
             font-size: 0.9rem;
         }
+
         @media (max-width: 900px) {
             .detection-layout {
                 grid-template-columns: 1fr;
@@ -272,14 +355,15 @@
         }
     </style>
 </head>
+
 <body>
     <nav class="navbar scrolled">
         <div class="container">
             <a href="../index.html" class="logo">
                 <div class="logo-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
-                        <path d="M12 6v6l4 2"/>
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
+                        <path d="M12 6v6l4 2" />
                     </svg>
                 </div>
                 <span class="logo-text">Mudra Academy</span>
@@ -310,8 +394,9 @@
                         <canvas id="landmarkCanvas"></canvas>
                         <div class="video-placeholder" id="placeholder">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                                <circle cx="12" cy="13" r="4"/>
+                                <path
+                                    d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                                <circle cx="12" cy="13" r="4" />
                             </svg>
                             <h3>Camera Ready</h3>
                             <p>Click Start to begin detection</p>
@@ -325,20 +410,20 @@
                     <div class="controls">
                         <button class="control-btn btn-start" id="startBtn" disabled>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polygon points="5 3 19 12 5 21 5 3"/>
+                                <polygon points="5 3 19 12 5 21 5 3" />
                             </svg>
                             Start
                         </button>
                         <button class="control-btn btn-stop" id="stopBtn" style="display:none;">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <rect x="6" y="6" width="12" height="12"/>
+                                <rect x="6" y="6" width="12" height="12" />
                             </svg>
                             Stop
                         </button>
                         <button class="control-btn btn-reset" id="resetBtn">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="1 4 1 10 7 10"/>
-                                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                                <polyline points="1 4 1 10 7 10" />
+                                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
                             </svg>
                             Reset
                         </button>
@@ -348,8 +433,8 @@
                     <div class="sidebar-card">
                         <h3>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                                <polyline points="22 4 12 14.01 9 11.01"/>
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                <polyline points="22 4 12 14.01 9 11.01" />
                             </svg>
                             System Status
                         </h3>
@@ -360,8 +445,8 @@
                     <div class="sidebar-card">
                         <h3>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"/>
-                                <circle cx="12" cy="12" r="3"/>
+                                <circle cx="12" cy="12" r="10" />
+                                <circle cx="12" cy="12" r="3" />
                             </svg>
                             Current Mudra
                         </h3>
@@ -373,9 +458,9 @@
                     <div class="sidebar-card">
                         <h3>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="18" y1="20" x2="18" y2="10"/>
-                                <line x1="12" y1="20" x2="12" y2="4"/>
-                                <line x1="6" y1="20" x2="6" y2="14"/>
+                                <line x1="18" y1="20" x2="18" y2="10" />
+                                <line x1="12" y1="20" x2="12" y2="4" />
+                                <line x1="6" y1="20" x2="6" y2="14" />
                             </svg>
                             Session
                         </h3>
@@ -393,8 +478,8 @@
                     <div class="sidebar-card">
                         <h3>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"/>
-                                <polyline points="12 6 12 12 16 14"/>
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="12 6 12 12 16 14" />
                             </svg>
                             Detected Mudras
                         </h3>
@@ -425,333 +510,334 @@
     </footer>
 
     <script src="../js/main.js"></script>
-    <!-- Load inference modules -->
+    <!-- Core Modules -->
+    <script src="../js/mudra-constants.js"></script>
     <script src="../js/mudra-inference.js"></script>
     <script src="../js/mudra-detection.js"></script>
-    
+
     <script>
-    (function() {
-        'use strict';
-        
-        // ============================================================
-        // PERFORMANCE OPTIMIZATION CONFIGURATION
-        // ============================================================
-        const DETECT_INTERVAL_ACTIVE = 100;   // ~10 FPS when hand visible
-        const DETECT_INTERVAL_IDLE = 200;     // ~5 FPS when no hand (saves CPU)
-        const IDLE_THRESHOLD = 5;             // Frames without hand before going idle
-        const STABLE_DETECTION_SLOWDOWN = 3;  // Slow down after stable detection
-        
-        // State
-        let running = false;
-        let modelsLoaded = false;
-        let video, canvas, ctx, landmarkCanvas, landmarkCtx;
-        let hands, camera;
-        let sessionTimer, startTime;
-        let uniqueMap = {}, lastMudra = null;
-        let lastDetectTime = 0;
-        let currentLandmarks = null;
-        let prevLandmarks = null;
-        let mudraFSM = null;
-        
-        // Performance optimization state
-        let idleFrameCount = 0;
-        let stableDetectionCount = 0;
-        let currentDetectInterval = DETECT_INTERVAL_ACTIVE;
+        (function () {
+            'use strict';
 
-        // Hand landmark connections
-        const HAND_CONNECTIONS = [
-            [0, 1], [1, 2], [2, 3], [3, 4],
-            [0, 5], [5, 6], [6, 7], [7, 8],
-            [0, 9], [9, 10], [10, 11], [11, 12],
-            [0, 13], [13, 14], [14, 15], [15, 16],
-            [0, 17], [17, 18], [18, 19], [19, 20],
-            [5, 9], [9, 13], [13, 17]
-        ];
+            // ============================================================
+            // PERFORMANCE OPTIMIZATION CONFIGURATION
+            // ============================================================
+            const DETECT_INTERVAL_ACTIVE = 100;   // ~10 FPS when hand visible
+            const DETECT_INTERVAL_IDLE = 200;     // ~5 FPS when no hand (saves CPU)
+            const IDLE_THRESHOLD = 5;             // Frames without hand before going idle
+            const STABLE_DETECTION_SLOWDOWN = 3;  // Slow down after stable detection
 
-        // Mudra meanings
-        const meanings = {
-            'Pataka': 'Flag - Beginning, clouds',
-            'Pataka Mudra': 'Flag - Beginning, clouds',
-            'Tripataka': 'Three-part flag - Crown',
-            'Tripataka Mudra': 'Three-part flag - Crown',
-            'Tripathaka': 'Three-part flag - Crown',
-            'Ardhapataka': 'Half flag - Leaves',
-            'Ardhapataka Mudra': 'Half flag - Leaves',
-            'Ardhapathaka': 'Half flag - Leaves',
-            'Kartarimukha': 'Scissors - Separation',
-            'Kartari Mukham Mudra': 'Scissors - Separation',
-            'Katrimukha': 'Scissors - Separation',
-            'Mayura': 'Peacock',
-            'Mayura Mudra': 'Peacock',
-            'Ardhachandra': 'Half moon',
-            'Ardhachandran': 'Half moon',
-            'Arala': 'Bent',
-            'Arala Mudra': 'Bent',
-            'Aralam': 'Bent',
-            'Shukatunda': 'Parrot beak',
-            'Shuka Tundam Mudra': 'Parrot beak',
-            'Shukatundam': 'Parrot beak',
-            'Musti': 'Fist',
-            'Musthi Mudra': 'Fist',
-            'Mushti': 'Fist',
-            'Shikhara': 'Peak',
-            'Shikharam Mudra': 'Peak',
-            'Sikharam': 'Peak',
-            'Kapittha': 'Elephant apple',
-            'Kapith': 'Elephant apple',
-            'Katakamukha': 'Bracelet opening',
-            'Katakamukha_1': 'Bracelet opening',
-            'Suchi': 'Needle',
-            'Suchi Mudra': 'Needle',
-            'Chandrakala': 'Moon digit',
-            'Padmakosha': 'Lotus bud',
-            'Sarpashirsha': 'Snake hood',
-            'Sarpashirsha Mudra': 'Snake hood',
-            'Sarpasirsha': 'Snake hood',
-            'Mrigashirsha': 'Deer head',
-            'Mrigasheersha Mudra': 'Deer head',
-            'Mrigasirsha': 'Deer head',
-            'Simhamukha': 'Lion face',
-            'Simhamukha Mudra': 'Lion face',
-            'Simhamukham': 'Lion face',
-            'Kangula': 'Bell',
-            'Kangulam': 'Bell',
-            'Alapadma': 'Bloomed lotus',
-            'Alapadmam': 'Bloomed lotus',
-            'Chatura': 'Square',
-            'Chatura Mudra': 'Square',
-            'Chaturam': 'Square',
-            'Bhramara': 'Bee',
-            'Bramaram': 'Bee',
-            'Hamsasya': 'Swan beak',
-            'Hamsasya Mudra': 'Swan beak',
-            'Hamsasyam': 'Swan beak',
-            'Hamsapaksha': 'Swan wing',
-            'Samdamsha': 'Pincers',
-            'Mukula': 'Bud',
-            'Mukulam': 'Bud',
-            'Trishula': 'Trident',
-            'Trishula Mudra': 'Trident',
-            'Trishulam': 'Trident',
-            'Tamarachudam': 'Lotus petal'
-        };
+            // State
+            let running = false;
+            let modelsLoaded = false;
+            let video, canvas, ctx, landmarkCanvas, landmarkCtx;
+            let hands, camera;
+            let sessionTimer, startTime;
+            let uniqueMap = {}, lastMudra = null;
+            let lastDetectTime = 0;
+            let currentLandmarks = null;
+            let prevLandmarks = null;
+            let mudraFSM = null;
 
-        const $ = (id) => document.getElementById(id);
+            // Performance optimization state
+            let idleFrameCount = 0;
+            let stableDetectionCount = 0;
+            let currentDetectInterval = DETECT_INTERVAL_ACTIVE;
 
-        // Initialize ONNX models
-        async function initializeModels() {
-            const loadingOverlay = $('loadingOverlay');
-            const loadingText = $('loadingText');
-            const statusIndicator = $('statusIndicator');
-            const startBtn = $('startBtn');
-            
-            loadingOverlay.style.display = 'flex';
-            
-            try {
-                loadingText.textContent = 'Loading Random Forest model (~60MB)...';
-                
-                // Initialize only RF model (not YOLO - that's for double-hand)
-                const success = await window.MudraInference.initialize({ loadYolo: false, loadRF: true });
-                
-                if (success) {
-                    modelsLoaded = true;
-                    statusIndicator.className = 'api-status connected';
-                    statusIndicator.innerHTML = '<span>●</span> Models loaded';
-                    startBtn.disabled = false;
-                    
-                    // Initialize FSM
-                    mudraFSM = new window.MudraDetection.MudraFSM();
+            // Hand landmark connections
+            const HAND_CONNECTIONS = [
+                [0, 1], [1, 2], [2, 3], [3, 4],
+                [0, 5], [5, 6], [6, 7], [7, 8],
+                [0, 9], [9, 10], [10, 11], [11, 12],
+                [0, 13], [13, 14], [14, 15], [15, 16],
+                [0, 17], [17, 18], [18, 19], [19, 20],
+                [5, 9], [9, 13], [13, 17]
+            ];
+
+            // Mudra meanings
+            const meanings = {
+                'Pataka': 'Flag - Beginning, clouds',
+                'Pataka Mudra': 'Flag - Beginning, clouds',
+                'Tripataka': 'Three-part flag - Crown',
+                'Tripataka Mudra': 'Three-part flag - Crown',
+                'Tripathaka': 'Three-part flag - Crown',
+                'Ardhapataka': 'Half flag - Leaves',
+                'Ardhapataka Mudra': 'Half flag - Leaves',
+                'Ardhapathaka': 'Half flag - Leaves',
+                'Kartarimukha': 'Scissors - Separation',
+                'Kartari Mukham Mudra': 'Scissors - Separation',
+                'Katrimukha': 'Scissors - Separation',
+                'Mayura': 'Peacock',
+                'Mayura Mudra': 'Peacock',
+                'Ardhachandra': 'Half moon',
+                'Ardhachandran': 'Half moon',
+                'Arala': 'Bent',
+                'Arala Mudra': 'Bent',
+                'Aralam': 'Bent',
+                'Shukatunda': 'Parrot beak',
+                'Shuka Tundam Mudra': 'Parrot beak',
+                'Shukatundam': 'Parrot beak',
+                'Musti': 'Fist',
+                'Musthi Mudra': 'Fist',
+                'Mushti': 'Fist',
+                'Shikhara': 'Peak',
+                'Shikharam Mudra': 'Peak',
+                'Sikharam': 'Peak',
+                'Kapittha': 'Elephant apple',
+                'Kapith': 'Elephant apple',
+                'Katakamukha': 'Bracelet opening',
+                'Katakamukha_1': 'Bracelet opening',
+                'Suchi': 'Needle',
+                'Suchi Mudra': 'Needle',
+                'Chandrakala': 'Moon digit',
+                'Padmakosha': 'Lotus bud',
+                'Sarpashirsha': 'Snake hood',
+                'Sarpashirsha Mudra': 'Snake hood',
+                'Sarpasirsha': 'Snake hood',
+                'Mrigashirsha': 'Deer head',
+                'Mrigasheersha Mudra': 'Deer head',
+                'Mrigasirsha': 'Deer head',
+                'Simhamukha': 'Lion face',
+                'Simhamukha Mudra': 'Lion face',
+                'Simhamukham': 'Lion face',
+                'Kangula': 'Bell',
+                'Kangulam': 'Bell',
+                'Alapadma': 'Bloomed lotus',
+                'Alapadmam': 'Bloomed lotus',
+                'Chatura': 'Square',
+                'Chatura Mudra': 'Square',
+                'Chaturam': 'Square',
+                'Bhramara': 'Bee',
+                'Bramaram': 'Bee',
+                'Hamsasya': 'Swan beak',
+                'Hamsasya Mudra': 'Swan beak',
+                'Hamsasyam': 'Swan beak',
+                'Hamsapaksha': 'Swan wing',
+                'Samdamsha': 'Pincers',
+                'Mukula': 'Bud',
+                'Mukulam': 'Bud',
+                'Trishula': 'Trident',
+                'Trishula Mudra': 'Trident',
+                'Trishulam': 'Trident',
+                'Tamarachudam': 'Lotus petal'
+            };
+
+            const $ = (id) => document.getElementById(id);
+
+            // Initialize ONNX models
+            async function initializeModels() {
+                const loadingOverlay = $('loadingOverlay');
+                const loadingText = $('loadingText');
+                const statusIndicator = $('statusIndicator');
+                const startBtn = $('startBtn');
+
+                loadingOverlay.style.display = 'flex';
+
+                try {
+                    loadingText.textContent = 'Loading Random Forest model (~60MB)...';
+
+                    // Initialize only RF model (not YOLO - that's for double-hand)
+                    const success = await window.MudraInference.initialize({ loadYolo: false, loadRF: true });
+
+                    if (success) {
+                        modelsLoaded = true;
+                        statusIndicator.className = 'api-status connected';
+                        statusIndicator.innerHTML = '<span>●</span> Models loaded';
+                        startBtn.disabled = false;
+
+                        // Initialize FSM
+                        mudraFSM = new window.MudraDetection.MudraFSM();
+                    } else {
+                        throw new Error('Failed to load models');
+                    }
+                } catch (error) {
+                    statusIndicator.className = 'api-status error';
+                    statusIndicator.innerHTML = '<span>●</span> Error loading models';
+                } finally {
+                    loadingOverlay.style.display = 'none';
+                }
+            }
+
+            // Draw landmarks on canvas
+            function drawLandmarks(landmarks) {
+                if (!landmarkCtx) return;
+
+                const w = landmarkCanvas.width;
+                const h = landmarkCanvas.height;
+
+                landmarkCtx.clearRect(0, 0, w, h);
+
+                if (!landmarks || landmarks.length < 21) return;
+
+                // Draw connections
+                landmarkCtx.strokeStyle = 'rgba(212, 168, 75, 0.8)';
+                landmarkCtx.lineWidth = 3;
+                landmarkCtx.lineCap = 'round';
+
+                HAND_CONNECTIONS.forEach(([start, end]) => {
+                    const startLm = landmarks[start];
+                    const endLm = landmarks[end];
+                    if (startLm && endLm) {
+                        landmarkCtx.beginPath();
+                        landmarkCtx.moveTo(startLm.x * w, startLm.y * h);
+                        landmarkCtx.lineTo(endLm.x * w, endLm.y * h);
+                        landmarkCtx.stroke();
+                    }
+                });
+
+                // Draw landmark points
+                landmarks.forEach((lm, index) => {
+                    const x = lm.x * w;
+                    const y = lm.y * h;
+
+                    if (index === 0) {
+                        // Wrist
+                        landmarkCtx.fillStyle = '#8B2942';
+                        landmarkCtx.beginPath();
+                        landmarkCtx.arc(x, y, 4, 0, Math.PI * 2);
+                        landmarkCtx.fill();
+                        landmarkCtx.strokeStyle = '#fff';
+                        landmarkCtx.lineWidth = 2;
+                        landmarkCtx.stroke();
+                    } else if ([4, 8, 12, 16, 20].includes(index)) {
+                        // Fingertips
+                        landmarkCtx.fillStyle = '#D4A84B';
+                        landmarkCtx.beginPath();
+                        landmarkCtx.arc(x, y, 4, 0, Math.PI * 2);
+                        landmarkCtx.fill();
+                        landmarkCtx.strokeStyle = '#fff';
+                        landmarkCtx.lineWidth = 2;
+                        landmarkCtx.stroke();
+                    } else {
+                        // Other joints
+                        landmarkCtx.fillStyle = '#fff';
+                        landmarkCtx.beginPath();
+                        landmarkCtx.arc(x, y, 4, 0, Math.PI * 2);
+                        landmarkCtx.fill();
+                    }
+                });
+            }
+
+            // MediaPipe results callback (OPTIMIZED with adaptive detection rate)
+            function onResults(results) {
+                if (!running) return;
+
+                if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                    currentLandmarks = results.multiHandLandmarks[0];
+                    drawLandmarks(currentLandmarks);
+
+                    // Hand detected - reset to active mode
+                    idleFrameCount = 0;
+                    currentDetectInterval = DETECT_INTERVAL_ACTIVE;
                 } else {
-                    throw new Error('Failed to load models');
+                    currentLandmarks = null;
+                    if (landmarkCtx) {
+                        landmarkCtx.clearRect(0, 0, landmarkCanvas.width, landmarkCanvas.height);
+                    }
+
+                    // No hand - count idle frames and slow down detection
+                    idleFrameCount++;
+                    if (idleFrameCount > IDLE_THRESHOLD) {
+                        currentDetectInterval = DETECT_INTERVAL_IDLE;
+                    }
                 }
-            } catch (error) {
-                statusIndicator.className = 'api-status error';
-                statusIndicator.innerHTML = '<span>●</span> Error loading models';
-            } finally {
-                loadingOverlay.style.display = 'none';
-            }
-        }
 
-        // Draw landmarks on canvas
-        function drawLandmarks(landmarks) {
-            if (!landmarkCtx) return;
-
-            const w = landmarkCanvas.width;
-            const h = landmarkCanvas.height;
-
-            landmarkCtx.clearRect(0, 0, w, h);
-
-            if (!landmarks || landmarks.length < 21) return;
-
-            // Draw connections
-            landmarkCtx.strokeStyle = 'rgba(212, 168, 75, 0.8)';
-            landmarkCtx.lineWidth = 3;
-            landmarkCtx.lineCap = 'round';
-
-            HAND_CONNECTIONS.forEach(([start, end]) => {
-                const startLm = landmarks[start];
-                const endLm = landmarks[end];
-                if (startLm && endLm) {
-                    landmarkCtx.beginPath();
-                    landmarkCtx.moveTo(startLm.x * w, startLm.y * h);
-                    landmarkCtx.lineTo(endLm.x * w, endLm.y * h);
-                    landmarkCtx.stroke();
-                }
-            });
-
-            // Draw landmark points
-            landmarks.forEach((lm, index) => {
-                const x = lm.x * w;
-                const y = lm.y * h;
-
-                if (index === 0) {
-                    // Wrist
-                    landmarkCtx.fillStyle = '#8B2942';
-                    landmarkCtx.beginPath();
-                    landmarkCtx.arc(x, y, 4, 0, Math.PI * 2);
-                    landmarkCtx.fill();
-                    landmarkCtx.strokeStyle = '#fff';
-                    landmarkCtx.lineWidth = 2;
-                    landmarkCtx.stroke();
-                } else if ([4, 8, 12, 16, 20].includes(index)) {
-                    // Fingertips
-                    landmarkCtx.fillStyle = '#D4A84B';
-                    landmarkCtx.beginPath();
-                    landmarkCtx.arc(x, y, 4, 0, Math.PI * 2);
-                    landmarkCtx.fill();
-                    landmarkCtx.strokeStyle = '#fff';
-                    landmarkCtx.lineWidth = 2;
-                    landmarkCtx.stroke();
-                } else {
-                    // Other joints
-                    landmarkCtx.fillStyle = '#fff';
-                    landmarkCtx.beginPath();
-                    landmarkCtx.arc(x, y, 4, 0, Math.PI * 2);
-                    landmarkCtx.fill();
-                }
-            });
-        }
-
-        // MediaPipe results callback (OPTIMIZED with adaptive detection rate)
-        function onResults(results) {
-            if (!running) return;
-
-            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                currentLandmarks = results.multiHandLandmarks[0];
-                drawLandmarks(currentLandmarks);
-                
-                // Hand detected - reset to active mode
-                idleFrameCount = 0;
-                currentDetectInterval = DETECT_INTERVAL_ACTIVE;
-            } else {
-                currentLandmarks = null;
-                if (landmarkCtx) {
-                    landmarkCtx.clearRect(0, 0, landmarkCanvas.width, landmarkCanvas.height);
-                }
-                
-                // No hand - count idle frames and slow down detection
-                idleFrameCount++;
-                if (idleFrameCount > IDLE_THRESHOLD) {
-                    currentDetectInterval = DETECT_INTERVAL_IDLE;
+                // Run detection (throttled with adaptive interval)
+                const now = Date.now();
+                if (now - lastDetectTime >= currentDetectInterval) {
+                    lastDetectTime = now;
+                    detectMudra();
                 }
             }
 
-            // Run detection (throttled with adaptive interval)
-            const now = Date.now();
-            if (now - lastDetectTime >= currentDetectInterval) {
-                lastDetectTime = now;
-                detectMudra();
-            }
-        }
+            // Main detection function (pure JS, no server)
+            async function detectMudra() {
+                if (!running || !modelsLoaded || !mudraFSM) return;
 
-        // Main detection function (pure JS, no server)
-        async function detectMudra() {
-            if (!running || !modelsLoaded || !mudraFSM) return;
+                let candidateName = null;
+                let candidateConf = 0;
+                let candidateMethod = null;
 
-            let candidateName = null;
-            let candidateConf = 0;
-            let candidateMethod = null;
+                if (currentLandmarks && currentLandmarks.length >= 21) {
+                    // Run hybrid detection (rules + ML)
+                    const result = await window.MudraDetection.detectMudraHybrid(
+                        currentLandmarks,
+                        "Right",
+                        prevLandmarks
+                    );
 
-            if (currentLandmarks && currentLandmarks.length >= 21) {
-                // Run hybrid detection (rules + ML)
-                const result = await window.MudraDetection.detectMudraHybrid(
-                    currentLandmarks, 
-                    "Right", 
-                    prevLandmarks
+                    if (result.mudraName && !["Unknown", "Stabilizing..."].includes(result.mudraName)) {
+                        candidateName = result.mudraName;
+                        candidateConf = result.confidence;
+                        candidateMethod = result.method;
+                    }
+
+                    // Store for stability check
+                    prevLandmarks = currentLandmarks.map(lm => ({
+                        x: lm.x, y: lm.y, z: lm.z || 0
+                    }));
+                }
+
+                // Update FSM
+                const fsmResult = mudraFSM.update(
+                    !!currentLandmarks,
+                    candidateName,
+                    candidateConf,
+                    candidateMethod
                 );
 
-                if (result.mudraName && !["Unknown", "Stabilizing..."].includes(result.mudraName)) {
-                    candidateName = result.mudraName;
-                    candidateConf = result.confidence;
-                    candidateMethod = result.method;
+                // Update display
+                show(fsmResult.displayName, fsmResult.displayConf, fsmResult.displayMethod);
+            }
+
+            function show(name, conf, method) {
+                const label = $('mudraName');
+                const currentName = $('currentName');
+                const currentMeaning = $('currentMeaning');
+
+                // Skip interim states
+                if (!name || ['Unknown', 'Stabilizing...', 'Detecting...', 'Show mudra...', 'No hand detected'].includes(name)) {
+                    label.textContent = name || '--';
+                    label.style.color = '#fff';
+                    currentName.textContent = '--';
+                    currentMeaning.textContent = 'Waiting for detection';
+                    return;
                 }
 
-                // Store for stability check
-                prevLandmarks = currentLandmarks.map(lm => ({
-                    x: lm.x, y: lm.y, z: lm.z || 0
-                }));
-            }
+                // Display detected mudra
+                const displayName = name.replace(' Mudra', '');
+                const confText = conf > 0 ? ` (${(conf * 100).toFixed(0)}%)` : '';
+                const methodText = method ? ` [${method}]` : '';
 
-            // Update FSM
-            const fsmResult = mudraFSM.update(
-                !!currentLandmarks,
-                candidateName,
-                candidateConf,
-                candidateMethod
-            );
+                label.textContent = displayName + confText;
+                label.style.color = method === 'RULE' ? '#D4A84B' : '#4ADE80';
 
-            // Update display
-            show(fsmResult.displayName, fsmResult.displayConf, fsmResult.displayMethod);
-        }
+                currentName.textContent = displayName + methodText;
+                currentMeaning.textContent = meanings[name] || meanings[displayName] || 'Traditional mudra';
 
-        function show(name, conf, method) {
-            const label = $('mudraName');
-            const currentName = $('currentName');
-            const currentMeaning = $('currentMeaning');
-
-            // Skip interim states
-            if (!name || ['Unknown', 'Stabilizing...', 'Detecting...', 'Show mudra...', 'No hand detected'].includes(name)) {
-                label.textContent = name || '--';
-                label.style.color = '#fff';
-                currentName.textContent = '--';
-                currentMeaning.textContent = 'Waiting for detection';
-                return;
-            }
-
-            // Display detected mudra
-            const displayName = name.replace(' Mudra', '');
-            const confText = conf > 0 ? ` (${(conf * 100).toFixed(0)}%)` : '';
-            const methodText = method ? ` [${method}]` : '';
-
-            label.textContent = displayName + confText;
-            label.style.color = method === 'RULE' ? '#D4A84B' : '#4ADE80';
-
-            currentName.textContent = displayName + methodText;
-            currentMeaning.textContent = meanings[name] || meanings[displayName] || 'Traditional mudra';
-
-            // Track unique mudras
-            if (name !== lastMudra) {
-                lastMudra = name;
-                if (!uniqueMap[name]) {
-                    uniqueMap[name] = true;
-                    $('uniqueCount').textContent = Object.keys(uniqueMap).length;
+                // Track unique mudras
+                if (name !== lastMudra) {
+                    lastMudra = name;
+                    if (!uniqueMap[name]) {
+                        uniqueMap[name] = true;
+                        $('uniqueCount').textContent = Object.keys(uniqueMap).length;
+                    }
+                    addHistory(name, conf, method);
                 }
-                addHistory(name, conf, method);
             }
-        }
 
-        function addHistory(name, conf, method) {
-            const list = $('historyList');
-            const empty = list.querySelector('.empty-state');
-            if (empty) empty.remove();
+            function addHistory(name, conf, method) {
+                const list = $('historyList');
+                const empty = list.querySelector('.empty-state');
+                if (empty) empty.remove();
 
-            const displayName = name.replace(' Mudra', '');
-            const abbr = displayName.substring(0, 2).toUpperCase();
-            const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const displayName = name.replace(' Mudra', '');
+                const abbr = displayName.substring(0, 2).toUpperCase();
+                const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-            const item = document.createElement('div');
-            item.className = 'history-item';
-            item.innerHTML = `
+                const item = document.createElement('div');
+                item.className = 'history-item';
+                item.innerHTML = `
                 <div class="history-abbr">${abbr}</div>
                 <div class="history-info">
                     <div class="history-name">${displayName}</div>
@@ -760,125 +846,126 @@
                 <div class="history-conf">${conf > 0 ? (conf * 100).toFixed(0) + '%' : '--'}</div>
             `;
 
-            list.insertBefore(item, list.firstChild);
-        }
-
-        function updateTime() {
-            const elapsed = Math.floor((Date.now() - startTime) / 1000);
-            const mins = Math.floor(elapsed / 60);
-            const secs = elapsed % 60;
-            $('duration').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
-        }
-
-        function start() {
-            if (!modelsLoaded) {
-                alert('Models are still loading. Please wait.');
-                return;
+                list.insertBefore(item, list.firstChild);
             }
 
-            video = $('webcam');
-            canvas = $('canvas');
-            ctx = canvas.getContext('2d');
-            canvas.width = 640;
-            canvas.height = 480;
-
-            landmarkCanvas = $('landmarkCanvas');
-            landmarkCtx = landmarkCanvas.getContext('2d', { willReadFrequently: true });
-            const container = landmarkCanvas.parentElement;
-            landmarkCanvas.width = container.offsetWidth;
-            landmarkCanvas.height = container.offsetHeight;
-
-            // Initialize MediaPipe Hands
-            hands = new Hands({
-                locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`
-            });
-
-            // OPTIMIZED MediaPipe settings for better performance
-            // modelComplexity: 0 = Lite (faster, less accurate)
-            // modelComplexity: 1 = Full (slower, more accurate)
-            // Using 0 for better performance - accuracy is maintained by our FSM
-            hands.setOptions({
-                maxNumHands: 1,
-                modelComplexity: 0,           // OPTIMIZED: Use lite model (saves ~40% CPU)
-                minDetectionConfidence: 0.6,
-                minTrackingConfidence: 0.5    // Slightly lower for better tracking continuity
-            });
-
-            hands.onResults(onResults);
-
-            // Initialize camera with optimized frame rate
-            camera = new Camera(video, {
-                onFrame: async () => {
-                    if (running) {
-                        await hands.send({ image: video });
-                    }
-                },
-                width: 640,
-                height: 480,
-                facingMode: 'user'
-            });
-
-            camera.start().then(() => {
-                $('placeholder').style.display = 'none';
-                $('startBtn').style.display = 'none';
-                $('stopBtn').style.display = 'inline-flex';
-                $('mudraName').style.display = 'block';
-                running = true;
-                startTime = Date.now();
-                sessionTimer = setInterval(updateTime, 1000);
-                
-                // Reset FSM
-                if (mudraFSM) mudraFSM.reset();
-            }).catch((err) => {
-                alert('Could not access camera. Please ensure camera permissions are granted.');
-            });
-        }
-
-        function stop() {
-            running = false;
-            clearInterval(sessionTimer);
-
-            if (camera) {
-                camera.stop();
+            function updateTime() {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                const mins = Math.floor(elapsed / 60);
+                const secs = elapsed % 60;
+                $('duration').textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
             }
 
-            $('placeholder').style.display = 'flex';
-            $('startBtn').style.display = 'inline-flex';
-            $('stopBtn').style.display = 'none';
-            $('mudraName').style.display = 'none';
+            function start() {
+                if (!modelsLoaded) {
+                    alert('Models are still loading. Please wait.');
+                    return;
+                }
 
-            if (landmarkCtx) {
-                landmarkCtx.clearRect(0, 0, landmarkCanvas.width, landmarkCanvas.height);
+                video = $('webcam');
+                canvas = $('canvas');
+                ctx = canvas.getContext('2d');
+                canvas.width = 640;
+                canvas.height = 480;
+
+                landmarkCanvas = $('landmarkCanvas');
+                landmarkCtx = landmarkCanvas.getContext('2d', { willReadFrequently: true });
+                const container = landmarkCanvas.parentElement;
+                landmarkCanvas.width = container.offsetWidth;
+                landmarkCanvas.height = container.offsetHeight;
+
+                // Initialize MediaPipe Hands
+                hands = new Hands({
+                    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`
+                });
+
+                // OPTIMIZED MediaPipe settings for better performance
+                // modelComplexity: 0 = Lite (faster, less accurate)
+                // modelComplexity: 1 = Full (slower, more accurate)
+                // Using 0 for better performance - accuracy is maintained by our FSM
+                hands.setOptions({
+                    maxNumHands: 1,
+                    modelComplexity: 1,           // OPTIMIZED: Use lite model (saves ~40% CPU)
+                    minDetectionConfidence: 0.6,
+                    minTrackingConfidence: 0.5    // Slightly lower for better tracking continuity
+                });
+
+                hands.onResults(onResults);
+
+                // Initialize camera with optimized frame rate
+                camera = new Camera(video, {
+                    onFrame: async () => {
+                        if (running) {
+                            await hands.send({ image: video });
+                        }
+                    },
+                    width: 640,
+                    height: 480,
+                    facingMode: 'user'
+                });
+
+                camera.start().then(() => {
+                    $('placeholder').style.display = 'none';
+                    $('startBtn').style.display = 'none';
+                    $('stopBtn').style.display = 'inline-flex';
+                    $('mudraName').style.display = 'block';
+                    running = true;
+                    startTime = Date.now();
+                    sessionTimer = setInterval(updateTime, 1000);
+
+                    // Reset FSM
+                    if (mudraFSM) mudraFSM.reset();
+                }).catch((err) => {
+                    alert('Could not access camera. Please ensure camera permissions are granted.');
+                });
             }
-        }
 
-        function reset() {
-            stop();
-            uniqueMap = {};
-            lastMudra = null;
-            prevLandmarks = null;
-            $('uniqueCount').textContent = '0';
-            $('duration').textContent = '0:00';
-            $('historyList').innerHTML = '<div class="empty-state">No mudras detected yet</div>';
-            $('currentName').textContent = '--';
-            $('currentMeaning').textContent = 'Waiting for detection';
-            
-            if (mudraFSM) {
-                mudraFSM = new window.MudraDetection.MudraFSM();
+            function stop() {
+                running = false;
+                clearInterval(sessionTimer);
+
+                if (camera) {
+                    camera.stop();
+                }
+
+                $('placeholder').style.display = 'flex';
+                $('startBtn').style.display = 'inline-flex';
+                $('stopBtn').style.display = 'none';
+                $('mudraName').style.display = 'none';
+
+                if (landmarkCtx) {
+                    landmarkCtx.clearRect(0, 0, landmarkCanvas.width, landmarkCanvas.height);
+                }
             }
-        }
 
-        // Event listeners
-        $('startBtn').addEventListener('click', start);
-        $('stopBtn').addEventListener('click', stop);
-        $('resetBtn').addEventListener('click', reset);
+            function reset() {
+                stop();
+                uniqueMap = {};
+                lastMudra = null;
+                prevLandmarks = null;
+                $('uniqueCount').textContent = '0';
+                $('duration').textContent = '0:00';
+                $('historyList').innerHTML = '<div class="empty-state">No mudras detected yet</div>';
+                $('currentName').textContent = '--';
+                $('currentMeaning').textContent = 'Waiting for detection';
 
-        // Initialize on page load
-        window.addEventListener('load', initializeModels);
-    })();
+                if (mudraFSM) {
+                    mudraFSM = new window.MudraDetection.MudraFSM();
+                }
+            }
+
+            // Event listeners
+            $('startBtn').addEventListener('click', start);
+            $('stopBtn').addEventListener('click', stop);
+            $('resetBtn').addEventListener('click', reset);
+
+            // Initialize on page load
+            window.addEventListener('load', initializeModels);
+        })();
     </script>
-    
+
     <!-- Chatbot Widget -->
     <script src="../js/chat-widget.js"></script>
 </body>
+
 </html>

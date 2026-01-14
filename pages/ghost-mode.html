@@ -244,12 +244,15 @@
                     <video id="webcam" autoplay playsinline muted></video>
                     <canvas id="landmark-canvas"></canvas>
                     <img id="ghost-overlay-img" src="" alt="Ghost Overlay">
-                    
+
                     <div id="model-status" class="model-status loading">Loading AI models...</div>
-                    
+
                     <div id="match-feedback"
                         style="position: absolute; top: 20px; right: 20px; background: rgba(40, 200, 64, 0.9); color: white; padding: 5px 15px; border-radius: 20px; opacity: 0; transition: opacity 0.3s; font-weight: bold; pointer-events: none;">
                         Match!</div>
+                    <div id="detected-mudra-debug"
+                        style="position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.5); color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 12px; pointer-events: none;">
+                        Initializing...</div>
                 </div>
 
                 <!-- Right: Controls Sidebar -->
@@ -308,489 +311,477 @@
     <!-- MediaPipe Hands -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-    
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"
+        crossorigin="anonymous"></script>
+
     <!-- ONNX Runtime -->
     <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.16.3/dist/ort.min.js"></script>
-    
+
     <!-- Our modules -->
+    <script src="../js/mudra-constants.js"></script>
     <script src="../js/mudra-inference.js"></script>
     <script src="../js/mudra-detection.js"></script>
 
     <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        // DOM Elements
-        const video = document.getElementById('webcam');
-        const ghostImg = document.getElementById('ghost-overlay-img');
-        const mudraNameEl = document.getElementById('current-mudra-name');
-        const prevBtn = document.getElementById('prev-btn');
-        const nextBtn = document.getElementById('next-btn');
-        const voiceIndicator = document.getElementById('voice-indicator');
-        const voiceStatusText = document.getElementById('voice-status-text');
-        const matchFeedback = document.getElementById('match-feedback');
-        const modelStatus = document.getElementById('model-status');
-        const landmarkCanvas = document.getElementById('landmark-canvas');
-        const landmarkCtx = landmarkCanvas.getContext('2d', { willReadFrequently: true });
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM Elements
+            const video = document.getElementById('webcam');
+            const ghostImg = document.getElementById('ghost-overlay-img');
+            const mudraNameEl = document.getElementById('current-mudra-name');
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const voiceIndicator = document.getElementById('voice-indicator');
+            const voiceStatusText = document.getElementById('voice-status-text');
+            const matchFeedback = document.getElementById('match-feedback');
+            const modelStatus = document.getElementById('model-status');
+            const landmarkCanvas = document.getElementById('landmark-canvas');
+            const landmarkCtx = landmarkCanvas.getContext('2d', { willReadFrequently: true });
+            const debugEl = document.getElementById('detected-mudra-debug');
 
-        // State
-        let modelLoaded = false;
-        let camera = null;
-        let hands = null;
-        let mudraFSM = null;
-        let prevLandmarks = null;
-        let matchCounter = 0;
-        let lastConfirmedMudra = null;
-        let confirmationFrames = 0;
-        let isTransitioning = false;  // CRITICAL: Prevent multiple triggers during transition
-        
-        // Ghost Mode needs STRICTER thresholds to avoid jumpy behavior
-        const MATCH_THRESHOLD = 5;  // Require 5 consecutive matching frames
-        const STABILITY_FRAMES = 3; // Require 3 frames of same detection before counting
-        
-        // ============================================================
-        // PERFORMANCE OPTIMIZATION
-        // ============================================================
-        let consecutiveNoHandFrames = 0;
-        const IDLE_SLOWDOWN_THRESHOLD = 10;  // Frames without hand before slowing
-        let isIdleMode = false;
+            // State
+            let modelLoaded = false;
+            let camera = null;
+            let hands = null;
+            let mudraFSM = null;
+            let prevLandmarks = null;
+            let matchCounter = 0;
+            let lastConfirmedMudra = null;
+            let confirmationFrames = 0;
+            let isTransitioning = false;  // CRITICAL: Prevent multiple triggers during transition
 
-        // List of mudras based on available assets
-        const mudras = [
-            'Pataka', 'Tripataka', 'Ardhapataka', 'Kartarimukha', 'Mayura',
-            'Ardhachandra', 'Arala', 'Sukatunda', 'Musti', 'Sikharam',
-            'Kapittha', 'Katakamukha', 'Suchi', 'Chandrakala', 'Padmakosa',
-            'Sarpashirsa', 'Simhamukha', 'Kangula', 'Alapadma',
-            'Chatura', 'Bhamara', 'Hamsasya', 'Hamsapaksa', 'Sandamsha',
-            'Mukula', 'Tamracuda', 'Trisula'
-        ];
+            // Ghost Mode needs STRICTER thresholds to avoid jumpy behavior
+            const MATCH_THRESHOLD = 5;  // Require 5 consecutive matching frames
+            const STABILITY_FRAMES = 3; // Require 3 frames of same detection before counting
 
-        let currentIndex = 0;
-        let ghostEnabled = true;
-        let isVoiceActive = false;
+            // ============================================================
+            // PERFORMANCE OPTIMIZATION
+            // ============================================================
+            let consecutiveNoHandFrames = 0;
+            const IDLE_SLOWDOWN_THRESHOLD = 10;  // Frames without hand before slowing
+            let isIdleMode = false;
 
-        // Asset mapping to handle filename discrepancies
-        const getAssetPath = (mudraName) => {
-            let filename = mudraName;
-            if (mudraName === 'Chatura') filename = 'Chautra';
-            return `../assets/images/no-bg/${filename}_no_bg.png`;
-        };
+            // List of mudras based on available assets
+            const mudras = [
+                'Pataka', 'Tripataka', 'Ardhapataka', 'Kartarimukha', 'Mayura',
+                'Ardhachandra', 'Arala', 'Sukatunda', 'Musti', 'Sikharam',
+                'Kapittha', 'Katakamukha', 'Suchi', 'Chandrakala', 'Padmakosa',
+                'Sarpashirsa', 'Simhamukha', 'Kangula', 'Alapadma',
+                'Chatura', 'Bhamara', 'Hamsasya', 'Hamsapaksa', 'Sandamsha',
+                'Mukula', 'Tamracuda', 'Trisula'
+            ];
 
-        // Initialize models
-        async function initializeModels() {
-            try {
-                modelStatus.textContent = 'Loading Random Forest model...';
-                modelStatus.className = 'model-status loading';
+            let currentIndex = 0;
+            let ghostEnabled = true;
+            let isVoiceActive = false;
 
-                // Configure ONNX Runtime
-                ort.env.wasm.numThreads = 1;
 
-                // Initialize only RF model (single-hand detection)
-                await window.MudraInference.initializeRFOnly();
-                
-                // Initialize FSM
-                mudraFSM = new window.MudraDetection.MudraFSM();
 
-                modelLoaded = true;
-                modelStatus.textContent = '✓ AI Ready';
-                modelStatus.className = 'model-status ready';
-
-                // Start camera
-                initCamera();
-
-            } catch (error) {
-                modelStatus.textContent = '✗ Model load failed: ' + error.message;
-                modelStatus.className = 'model-status error';
-            }
-        }
-
-        // Initialize MediaPipe and Camera
-        function initCamera() {
-            hands = new Hands({
-                locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-            });
-
-            hands.setOptions({
-                maxNumHands: 1,
-                modelComplexity: 0,           // OPTIMIZED: Use lite model (saves ~40% CPU)
-                minDetectionConfidence: 0.6,
-                minTrackingConfidence: 0.5
-            });
-
-            hands.onResults(onHandResults);
-
-            camera = new Camera(video, {
-                onFrame: async () => {
-                    if (hands) {
-                        // OPTIMIZED: Skip frames when in idle mode (no hand for a while)
-                        if (isIdleMode && consecutiveNoHandFrames % 2 !== 0) {
-                            return;  // Skip every other frame when idle
-                        }
-                        await hands.send({ image: video });
-                    }
-                },
-                width: 640,
-                height: 480
-            });
-
-            camera.start();
-            updateDisplay();
-            setupVoiceRecognition();
-            setupKeyboardControls();
-        }
-
-        // Handle MediaPipe results (OPTIMIZED)
-        async function onHandResults(results) {
-            // Resize canvas only if needed
-            const targetWidth = video.videoWidth || 640;
-            const targetHeight = video.videoHeight || 480;
-            if (landmarkCanvas.width !== targetWidth || landmarkCanvas.height !== targetHeight) {
-                landmarkCanvas.width = targetWidth;
-                landmarkCanvas.height = targetHeight;
-            }
-            landmarkCtx.clearRect(0, 0, landmarkCanvas.width, landmarkCanvas.height);
-
-            if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
-                if (mudraFSM) {
-                    mudraFSM.update(false, null, 0, null);
-                }
-                prevLandmarks = null;
-                matchCounter = 0;
-                video.style.boxShadow = 'none';
-                
-                // Track idle state for performance optimization
-                consecutiveNoHandFrames++;
-                if (consecutiveNoHandFrames > IDLE_SLOWDOWN_THRESHOLD) {
-                    isIdleMode = true;
-                }
-                return;
-            }
-            
-            // Hand detected - reset idle state
-            consecutiveNoHandFrames = 0;
-            isIdleMode = false;
-
-            const landmarks = results.multiHandLandmarks[0];
-            const handedness = results.multiHandedness[0]?.label || 'Right';
-
-            // Draw landmarks
-            drawConnectors(landmarkCtx, landmarks, HAND_CONNECTIONS, { color: '#D4A84B', lineWidth: 2 });
-            drawLandmarks(landmarkCtx, landmarks, { color: '#8B2942', lineWidth: 1, radius: 3 });
-
-            if (!modelLoaded) {
-                return;
-            }
-
-            try {
-                // Run hybrid detection (rules + ML)
-                const detection = await window.MudraDetection.detectMudraHybrid(
-                    landmarks,
-                    handedness,
-                    prevLandmarks
-                );
-
-                // Enforce hand stability for RULE detections in Ghost Mode
-                // (Some rule checks can be triggered briefly during motion; require steady hand to accept them)
+            // Initialize models
+            async function initializeModels() {
                 try {
-                    const handSteady = window.MudraDetection.isHandSteady
-                        ? window.MudraDetection.isHandSteady(landmarks, prevLandmarks)
-                        : false;
+                    modelStatus.textContent = 'Loading Random Forest model...';
+                    modelStatus.className = 'model-status loading';
 
-                    if (detection.method === 'RULE' && !handSteady) {
-                        // Treat as stabilizing — let FSM see a null candidate so ML/stability can confirm
-                        detection.mudraName = 'Stabilizing...';
-                        detection.confidence = 0.0;
-                        detection.method = null;
+                    // Configure ONNX Runtime
+                    ort.env.wasm.numThreads = 1;
+
+                    // Initialize only RF model (single-hand detection)
+                    await window.MudraInference.initializeRFOnly();
+
+                    // Initialize FSM
+                    mudraFSM = new window.MudraDetection.MudraFSM();
+
+                    modelLoaded = true;
+                    modelStatus.textContent = '✓ AI Ready';
+                    modelStatus.className = 'model-status ready';
+
+                    // Start camera
+                    initCamera();
+
+                } catch (error) {
+                    modelStatus.textContent = '✗ Model load failed: ' + error.message;
+                    modelStatus.className = 'model-status error';
+                }
+            }
+
+            // Initialize MediaPipe and Camera
+            function initCamera() {
+                hands = new Hands({
+                    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+                });
+
+                hands.setOptions({
+                    maxNumHands: 1,
+                    modelComplexity: 0,           // OPTIMIZED: Use lite model (saves ~40% CPU)
+                    minDetectionConfidence: 0.6,
+                    minTrackingConfidence: 0.5
+                });
+
+                hands.onResults(onHandResults);
+
+                camera = new Camera(video, {
+                    onFrame: async () => {
+                        if (hands) {
+                            // OPTIMIZED: Skip frames when in idle mode (no hand for a while)
+                            if (isIdleMode && consecutiveNoHandFrames % 2 !== 0) {
+                                return;  // Skip every other frame when idle
+                            }
+                            await hands.send({ image: video });
+                        }
+                    },
+                    width: 640,
+                    height: 480
+                });
+
+                camera.start();
+                updateDisplay();
+                setupVoiceRecognition();
+                setupKeyboardControls();
+            }
+
+            // Handle MediaPipe results (OPTIMIZED)
+            async function onHandResults(results) {
+                // Resize canvas only if needed
+                const targetWidth = video.videoWidth || 640;
+                const targetHeight = video.videoHeight || 480;
+                if (landmarkCanvas.width !== targetWidth || landmarkCanvas.height !== targetHeight) {
+                    landmarkCanvas.width = targetWidth;
+                    landmarkCanvas.height = targetHeight;
+                }
+                landmarkCtx.clearRect(0, 0, landmarkCanvas.width, landmarkCanvas.height);
+
+                if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+                    if (mudraFSM) {
+                        mudraFSM.update(false, null, 0, null);
                     }
-                } catch (e) {
-                    // If stability check fails for any reason, fall back to original behavior
+                    prevLandmarks = null;
+                    matchCounter = 0;
+                    video.style.boxShadow = 'none';
+
+                    // Track idle state for performance optimization
+                    consecutiveNoHandFrames++;
+                    if (consecutiveNoHandFrames > IDLE_SLOWDOWN_THRESHOLD) {
+                        isIdleMode = true;
+                    }
+                    return;
                 }
 
-                // Update FSM
-                const fsmResult = mudraFSM.update(
-                    true,
-                    detection.mudraName !== "Unknown" && detection.mudraName !== "Stabilizing..." ? detection.mudraName : null,
-                    detection.confidence,
-                    detection.method
-                );
+                // Hand detected - reset idle state
+                consecutiveNoHandFrames = 0;
+                isIdleMode = false;
 
-                // Get display name
-                const displayName = fsmResult.displayName;
+                const landmarks = results.multiHandLandmarks[0];
+                const handedness = results.multiHandedness[0]?.label || 'Right';
 
-                // Check for match with target
-                if (displayName && displayName !== "Show mudra..." && displayName !== "Detecting..." && 
-                    displayName !== "Stabilizing..." && displayName !== "No hand detected") {
-                    checkMatch(displayName);
+                // Draw landmarks
+                drawConnectors(landmarkCtx, landmarks, HAND_CONNECTIONS, { color: '#D4A84B', lineWidth: 2 });
+                drawLandmarks(landmarkCtx, landmarks, { color: '#8B2942', lineWidth: 1, radius: 3 });
+
+                if (!modelLoaded) {
+                    return;
+                }
+
+                try {
+                    // Run hybrid detection (rules + ML)
+                    const detection = await window.MudraDetection.detectMudraHybrid(
+                        landmarks,
+                        handedness,
+                        prevLandmarks
+                    );
+
+                    // OPTIMIZED: Hybrid detection now handles stability internally via Weighted Voting
+                    // so we don't need to manually block it here.
+
+
+                    // Update FSM
+                    const fsmResult = mudraFSM.update(
+                        true,
+                        detection.mudraName !== "Unknown" && detection.mudraName !== "Stabilizing..." ? detection.mudraName : null,
+                        detection.confidence,
+                        detection.method
+                    );
+
+                    // Get display name
+                    const displayName = fsmResult.displayName;
+
+                    // Update debug display
+                    if (debugEl) {
+                        debugEl.textContent = `Detected: ${displayName} (${Math.round(fsmResult.displayConf * 100)}%)`;
+                    }
+
+                    // Check for match with target
+                    if (displayName && displayName !== "Show mudra..." && displayName !== "Detecting..." &&
+                        displayName !== "Stabilizing..." && displayName !== "No hand detected") {
+                        checkMatch(displayName);
+                    } else {
+                        matchCounter = 0;
+                        video.style.boxShadow = 'none';
+                    }
+
+                    prevLandmarks = landmarks;
+
+                } catch (error) {
+                    console.error("Ghost Mode detection error:", error);
+                    if (debugEl) debugEl.textContent = "Error: " + error.message;
+                }
+            }
+
+            // Normalize mudra name using shared constants
+            function normalizeMudraName(name) {
+                if (window.MudraConstants && window.MudraConstants.normalizeMudraName) {
+                    return window.MudraConstants.normalizeMudraName(name);
+                }
+                return name ? name.toLowerCase().replace(" mudra", "").trim() : "";
+            }
+
+            // Asset mapping using shared constants
+            const getAssetPath = (mudraName) => {
+                let filename = mudraName;
+                if (window.MudraConstants && window.MudraConstants.getMudraAssetBase) {
+                    filename = window.MudraConstants.getMudraAssetBase(mudraName);
+                }
+                return `../assets/images/no-bg/${filename}_no_bg.png`;
+            };
+
+            function checkMatch(detectedMudra) {
+                // CRITICAL: Don't process matches during transition
+                if (isTransitioning) {
+                    return;
+                }
+
+                const targetMudra = mudras[currentIndex];
+                const d = normalizeMudraName(detectedMudra);
+                const t = normalizeMudraName(targetMudra);
+
+                // STRICT matching - exact match only (no substring matching)
+                const isMatch = (d === t);
+
+                // Track confirmation stability
+                if (detectedMudra === lastConfirmedMudra) {
+                    confirmationFrames++;
                 } else {
+                    lastConfirmedMudra = detectedMudra;
+                    confirmationFrames = 1;
+                }
+
+                // Only count match if we've seen the SAME mudra for STABILITY_FRAMES
+                if (isMatch && confirmationFrames >= STABILITY_FRAMES) {
+                    matchCounter++;
+
+                    if (matchCounter === 1) {
+                        video.style.boxShadow = '0 0 10px var(--color-warning)';
+                    } else if (matchCounter === 2) {
+                        video.style.boxShadow = '0 0 15px var(--color-warning)';
+                    } else if (matchCounter >= 3) {
+                        video.style.boxShadow = '0 0 20px var(--color-secondary)';
+                    }
+
+                    if (matchCounter >= MATCH_THRESHOLD) {
+                        triggerSuccess();
+                    }
+                } else if (!isMatch) {
+                    // Reset match counter if wrong mudra detected
                     matchCounter = 0;
                     video.style.boxShadow = 'none';
                 }
-
-                prevLandmarks = landmarks;
-
-            } catch (error) {
-                // Silent error handling
-            }
-        }
-
-        // Normalize mudra name for comparison
-        function normalizeMudraName(name) {
-            if (!name) return '';
-            return name.toLowerCase()
-                .replace(' mudra', '')
-                .replace(/\s+/g, '')
-                .replace('musthi', 'musti')
-                .replace('shikharam', 'sikharam')
-                .replace('shukatundam', 'sukatunda')
-                .replace('kartarimukham', 'kartarimukha')
-                .replace('trishula', 'trisula')
-                .replace('sarpashirsha', 'sarpashirsa')
-                .replace('mrigasheersha', 'mrugashirsha')
-                .replace('hamsasya', 'hamsasya')
-                .replace('simhamukha', 'simhamukha')
-                .replace('ardhapataka', 'ardhapataka')
-                .replace('mayura', 'mayura')
-                .trim();
-        }
-
-        function checkMatch(detectedMudra) {
-            // CRITICAL: Don't process matches during transition
-            if (isTransitioning) {
-                return;
-            }
-            
-            const targetMudra = mudras[currentIndex];
-            const d = normalizeMudraName(detectedMudra);
-            const t = normalizeMudraName(targetMudra);
-
-            // STRICT matching - exact match only (no substring matching)
-            const isMatch = (d === t);
-
-            // Track confirmation stability
-            if (detectedMudra === lastConfirmedMudra) {
-                confirmationFrames++;
-            } else {
-                lastConfirmedMudra = detectedMudra;
-                confirmationFrames = 1;
+                // If isMatch but not stable enough yet, keep current matchCounter
             }
 
-            // Only count match if we've seen the SAME mudra for STABILITY_FRAMES
-            if (isMatch && confirmationFrames >= STABILITY_FRAMES) {
-                matchCounter++;
-
-                if (matchCounter === 1) {
-                    video.style.boxShadow = '0 0 10px var(--color-warning)';
-                } else if (matchCounter === 2) {
-                    video.style.boxShadow = '0 0 15px var(--color-warning)';
-                } else if (matchCounter >= 3) {
-                    video.style.boxShadow = '0 0 20px var(--color-secondary)';
+            function triggerSuccess() {
+                // CRITICAL: Set flag to prevent re-triggering during transition
+                if (isTransitioning) {
+                    return;  // Already transitioning, ignore
                 }
+                isTransitioning = true;
 
-                if (matchCounter >= MATCH_THRESHOLD) {
-                    triggerSuccess();
-                }
-            } else if (!isMatch) {
-                // Reset match counter if wrong mudra detected
                 matchCounter = 0;
-                video.style.boxShadow = 'none';
-            }
-            // If isMatch but not stable enough yet, keep current matchCounter
-        }
+                confirmationFrames = 0;
+                lastConfirmedMudra = null;
+                video.style.boxShadow = '0 0 30px #28c840';
+                matchFeedback.style.opacity = 1;
 
-        function triggerSuccess() {
-            // CRITICAL: Set flag to prevent re-triggering during transition
-            if (isTransitioning) {
-                return;  // Already transitioning, ignore
-            }
-            isTransitioning = true;
-            
-            matchCounter = 0;
-            confirmationFrames = 0;
-            lastConfirmedMudra = null;
-            video.style.boxShadow = '0 0 30px #28c840';
-            matchFeedback.style.opacity = 1;
-
-            // Reset FSM for fresh detection on next mudra
-            if (mudraFSM) {
-                mudraFSM.reset();
-            }
-
-            setTimeout(() => {
-                matchFeedback.style.opacity = 0;
-                video.style.boxShadow = 'none';
-                nextMudra();
-                
-                // Wait a bit more before allowing new matches (let user change hand position)
-                setTimeout(() => {
-                    isTransitioning = false;
-                }, 500);
-            }, 800);  // Slightly longer delay to see success state
-        }
-
-        function speakMudra(text) {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.rate = 0.9;
-                utterance.pitch = 1.0;
-                utterance.lang = 'hi-IN';
-
-                const voices = window.speechSynthesis.getVoices();
-                const hindiVoice = voices.find(v => v.lang.includes('hi') || v.name.includes('India'));
-                if (hindiVoice) utterance.voice = hindiVoice;
-
-                window.speechSynthesis.speak(utterance);
-            }
-        }
-
-        function updateDisplay() {
-            const currentMudra = mudras[currentIndex];
-            mudraNameEl.textContent = currentMudra;
-            ghostImg.src = getAssetPath(currentMudra);
-            ghostImg.style.opacity = ghostEnabled ? 0.3 : 0;
-            speakMudra(currentMudra);
-        }
-
-        function nextMudra() {
-            currentIndex = (currentIndex + 1) % mudras.length;
-            // Reset all state for fresh detection
-            matchCounter = 0;
-            confirmationFrames = 0;
-            lastConfirmedMudra = null;
-            video.style.boxShadow = 'none';
-            updateDisplay();
-            flashFeedback('Next');
-            if (mudraFSM) mudraFSM.reset();
-            
-            // Brief pause to prevent immediate re-matching (only if not already transitioning)
-            if (!isTransitioning) {
-                isTransitioning = true;
-                setTimeout(() => { isTransitioning = false; }, 300);
-            }
-        }
-
-        function prevMudra() {
-            currentIndex = (currentIndex - 1 + mudras.length) % mudras.length;
-            // Reset all state for fresh detection
-            matchCounter = 0;
-            confirmationFrames = 0;
-            lastConfirmedMudra = null;
-            video.style.boxShadow = 'none';
-            updateDisplay();
-            flashFeedback('Previous');
-            if (mudraFSM) mudraFSM.reset();
-            
-            // Brief pause to prevent immediate re-matching (only if not already transitioning)
-            if (!isTransitioning) {
-                isTransitioning = true;
-                setTimeout(() => { isTransitioning = false; }, 300);
-            }
-        }
-
-        function toggleGhost(enable) {
-            ghostEnabled = enable;
-            ghostImg.style.opacity = enable ? 0.3 : 0;
-            flashFeedback(enable ? 'Ghost On' : 'Ghost Off');
-        }
-
-        function flashFeedback(text) {
-            const originalText = voiceStatusText.textContent;
-            if (!originalText.includes('Error')) {
-                voiceStatusText.textContent = text;
-                voiceStatusText.style.color = 'var(--color-primary)';
-                setTimeout(() => {
-                    if (isVoiceActive) voiceStatusText.textContent = 'Listening...';
-                    voiceStatusText.style.color = '';
-                }, 2000);
-            }
-        }
-
-        // Event Listeners
-        nextBtn.addEventListener('click', nextMudra);
-        prevBtn.addEventListener('click', prevMudra);
-
-        // Keyboard Controls
-        function setupKeyboardControls() {
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'ArrowRight' || e.key === ' ' || e.key.toLowerCase() === 'n') {
-                    nextMudra();
-                } else if (e.key === 'ArrowLeft' || e.key === 'Backspace' || e.key.toLowerCase() === 'b') {
-                    prevMudra();
+                // Reset FSM for fresh detection on next mudra
+                if (mudraFSM) {
+                    mudraFSM.reset();
                 }
-            });
-        }
 
-        // Voice Recognition
-        function setupVoiceRecognition() {
-            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                voiceStatusText.textContent = 'Voice not supported (Use Chrome)';
-                voiceIndicator.style.backgroundColor = '#666';
-                document.getElementById('voice-indicator-badge').classList.add('inactive');
-                return;
+                setTimeout(() => {
+                    matchFeedback.style.opacity = 0;
+                    video.style.boxShadow = 'none';
+                    nextMudra();
+
+                    // Wait a bit more before allowing new matches (let user change hand position)
+                    setTimeout(() => {
+                        isTransitioning = false;
+                    }, 500);
+                }, 800);  // Slightly longer delay to see success state
             }
 
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            const recognition = new SpeechRecognition();
+            function speakMudra(text) {
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.rate = 0.9;
+                    utterance.pitch = 1.0;
+                    utterance.lang = 'hi-IN';
 
-            recognition.continuous = true;
-            recognition.interimResults = false;
-            recognition.lang = 'en-US';
+                    const voices = window.speechSynthesis.getVoices();
+                    const hindiVoice = voices.find(v => v.lang.includes('hi') || v.name.includes('India'));
+                    if (hindiVoice) utterance.voice = hindiVoice;
 
-            recognition.onstart = () => {
-                voiceStatusText.textContent = 'Listening...';
-                document.getElementById('voice-indicator-badge').classList.remove('inactive');
-                isVoiceActive = true;
-            };
+                    window.speechSynthesis.speak(utterance);
+                }
+            }
 
-            recognition.onerror = (event) => {
-                if (event.error === 'no-speech') return;
-                voiceStatusText.textContent = 'Mic Off (Click to On)';
-                document.getElementById('voice-indicator-badge').classList.add('inactive');
-                isVoiceActive = false;
-            };
+            function updateDisplay() {
+                const currentMudra = mudras[currentIndex];
+                mudraNameEl.textContent = currentMudra;
+                ghostImg.src = getAssetPath(currentMudra);
+                ghostImg.style.opacity = ghostEnabled ? 0.3 : 0;
+                speakMudra(currentMudra);
+            }
 
-            recognition.onend = () => {
-                if (isVoiceActive) {
-                    try { recognition.start(); } catch (e) {}
-                } else {
+            function nextMudra() {
+                currentIndex = (currentIndex + 1) % mudras.length;
+                // Reset all state for fresh detection
+                matchCounter = 0;
+                confirmationFrames = 0;
+                lastConfirmedMudra = null;
+                video.style.boxShadow = 'none';
+                updateDisplay();
+                flashFeedback('Next');
+                if (mudraFSM) mudraFSM.reset();
+
+                // Brief pause to prevent immediate re-matching (only if not already transitioning)
+                if (!isTransitioning) {
+                    isTransitioning = true;
+                    setTimeout(() => { isTransitioning = false; }, 300);
+                }
+            }
+
+            function prevMudra() {
+                currentIndex = (currentIndex - 1 + mudras.length) % mudras.length;
+                // Reset all state for fresh detection
+                matchCounter = 0;
+                confirmationFrames = 0;
+                lastConfirmedMudra = null;
+                video.style.boxShadow = 'none';
+                updateDisplay();
+                flashFeedback('Previous');
+                if (mudraFSM) mudraFSM.reset();
+
+                // Brief pause to prevent immediate re-matching (only if not already transitioning)
+                if (!isTransitioning) {
+                    isTransitioning = true;
+                    setTimeout(() => { isTransitioning = false; }, 300);
+                }
+            }
+
+            function toggleGhost(enable) {
+                ghostEnabled = enable;
+                ghostImg.style.opacity = enable ? 0.3 : 0;
+                flashFeedback(enable ? 'Ghost On' : 'Ghost Off');
+            }
+
+            function flashFeedback(text) {
+                const originalText = voiceStatusText.textContent;
+                if (!originalText.includes('Error')) {
+                    voiceStatusText.textContent = text;
+                    voiceStatusText.style.color = 'var(--color-primary)';
+                    setTimeout(() => {
+                        if (isVoiceActive) voiceStatusText.textContent = 'Listening...';
+                        voiceStatusText.style.color = '';
+                    }, 2000);
+                }
+            }
+
+            // Event Listeners
+            nextBtn.addEventListener('click', nextMudra);
+            prevBtn.addEventListener('click', prevMudra);
+
+            // Keyboard Controls
+            function setupKeyboardControls() {
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'ArrowRight' || e.key === ' ' || e.key.toLowerCase() === 'n') {
+                        nextMudra();
+                    } else if (e.key === 'ArrowLeft' || e.key === 'Backspace' || e.key.toLowerCase() === 'b') {
+                        prevMudra();
+                    }
+                });
+            }
+
+            // Voice Recognition
+            function setupVoiceRecognition() {
+                if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                    voiceStatusText.textContent = 'Voice not supported (Use Chrome)';
+                    voiceIndicator.style.backgroundColor = '#666';
                     document.getElementById('voice-indicator-badge').classList.add('inactive');
-                    voiceStatusText.textContent = 'Mic Off';
+                    return;
                 }
-            };
 
-            recognition.onresult = (event) => {
-                const lastResult = event.results[event.results.length - 1];
-                const command = lastResult[0].transcript.trim().toLowerCase();
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                const recognition = new SpeechRecognition();
 
-                if (command.includes('next') || command.includes('forward') || command.includes('go')) {
-                    nextMudra();
-                } else if (command.includes('back') || command.includes('previous') || command.includes('prev')) {
-                    prevMudra();
-                } else if (command.includes('ghost off') || command.includes('hide ghost')) {
-                    toggleGhost(false);
-                } else if (command.includes('ghost on') || command.includes('show ghost')) {
-                    toggleGhost(true);
-                }
-            };
+                recognition.continuous = true;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
 
-            // Start listening
-            try { recognition.start(); } catch (e) {}
-
-            document.getElementById('voice-indicator-badge').addEventListener('click', () => {
-                if (isVoiceActive) {
-                    isVoiceActive = false;
-                    recognition.stop();
-                } else {
+                recognition.onstart = () => {
+                    voiceStatusText.textContent = 'Listening...';
+                    document.getElementById('voice-indicator-badge').classList.remove('inactive');
                     isVoiceActive = true;
-                    recognition.start();
-                }
-            });
-        }
+                };
 
-        // Initialize
-        initializeModels();
-    });
+                recognition.onerror = (event) => {
+                    if (event.error === 'no-speech') return;
+                    voiceStatusText.textContent = 'Mic Off (Click to On)';
+                    document.getElementById('voice-indicator-badge').classList.add('inactive');
+                    isVoiceActive = false;
+                };
+
+                recognition.onend = () => {
+                    if (isVoiceActive) {
+                        try { recognition.start(); } catch (e) { }
+                    } else {
+                        document.getElementById('voice-indicator-badge').classList.add('inactive');
+                        voiceStatusText.textContent = 'Mic Off';
+                    }
+                };
+
+                recognition.onresult = (event) => {
+                    const lastResult = event.results[event.results.length - 1];
+                    const command = lastResult[0].transcript.trim().toLowerCase();
+
+                    if (command.includes('next') || command.includes('forward') || command.includes('go')) {
+                        nextMudra();
+                    } else if (command.includes('back') || command.includes('previous') || command.includes('prev')) {
+                        prevMudra();
+                    } else if (command.includes('ghost off') || command.includes('hide ghost')) {
+                        toggleGhost(false);
+                    } else if (command.includes('ghost on') || command.includes('show ghost')) {
+                        toggleGhost(true);
+                    }
+                };
+
+                // Start listening
+                try { recognition.start(); } catch (e) { }
+
+                document.getElementById('voice-indicator-badge').addEventListener('click', () => {
+                    if (isVoiceActive) {
+                        isVoiceActive = false;
+                        recognition.stop();
+                    } else {
+                        isVoiceActive = true;
+                        recognition.start();
+                    }
+                });
+            }
+
+            // Initialize
+            initializeModels();
+        });
     </script>
-    
+
     <!-- Chatbot Widget -->
     <script src="../js/chat-widget.js"></script>
 </body>

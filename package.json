@@ -33,6 +33,7 @@
     "@mediapipe/camera_utils": "^0.3.1675466862",
     "@mediapipe/hands": "^0.4.1675469240",
     "electron-squirrel-startup": "^1.0.1",
+    "onnxruntime-node": "^1.23.2",
     "onnxruntime-web": "^1.17.0"
   },
   "build": {
