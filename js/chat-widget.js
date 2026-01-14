@@ -11,7 +11,7 @@
 
     // Gemini API endpoint and key (hardcoded)
     const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
-    const GEMINI_API_KEY = 'AIzaSyDZagt_2g8ynnYm-XXY7_lv-EEhekvAo0o';
+    const GEMINI_API_KEY = '';
 
     // System prompt for Natya Guru persona
     const SYSTEM_PROMPT = `You are "Natya Guru", a wise and warm teacher of Bharatanatyam, the classical Indian dance form. Your role is to guide students through the spiritual and technical aspects of this ancient art.

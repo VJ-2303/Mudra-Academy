@@ -17,8 +17,8 @@ const getBasePath = () => {
 };
 
 const MODEL_PATHS = {
-    get randomForest() { return getBasePath() + 'ml/models/mudra_rf_model_new.onnx'; },
-    get classes() { return getBasePath() + 'ml/models/mudra_classes_new.json'; }
+    get randomForest() { return getBasePath() + 'ml/models/single.onnx'; },
+    get classes() { return getBasePath() + 'ml/models/single.json'; }
 };
 
 // Global sessions
