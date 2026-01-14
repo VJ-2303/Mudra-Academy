@@ -13,12 +13,12 @@ let onnxSession = null;
 // ================================================================================
 // ONNX MODEL CONFIGURATION
 // ================================================================================
-const MODEL_PATH = path.join(__dirname, '../ml/models/kkvp_new.onnx');
+const MODEL_PATH = path.join(__dirname, '../ml/models/kkkvp6.onnx');
 const CLASSES = [
     'Anjali', 'MATSYA', 'Naagabandha', 'SVASTIKA',
     'berunda', 'chakra', 'garuda', 'karkota',
-    'katariswastika', 'katva', 'pasha',
-    'pushpantha', 'shanka', 'shivalinga'
+    'katariswastika', 'katva', 'pasha', 'pushpantha',
+    'sakata', 'shanka', 'shivalinga', 'utsanga'
 ];
 const CONF_THRESHOLD = 0.35;
 
@@ -74,6 +74,7 @@ async function runInference(imageData) {
         const stride = numClasses + 4;
         let bestScore = 0;
         let bestClass = 0;
+        let bestIdx = 0;
 
         // Find best detection
         for (let i = 0; i < N; i++) {
@@ -88,6 +89,7 @@ async function runInference(imageData) {
                 if (score > bestScore) {
                     bestScore = score;
                     bestClass = c;
+                    bestIdx = i;
                 }
             }
         }
@@ -96,10 +98,25 @@ async function runInference(imageData) {
             return { detected: false };
         }
 
+        // Extract bounding box (cx, cy, w, h) for the best detection
+        let cx, cy, w, h;
+        if (transposed) {
+            cx = output[bestIdx * stride + 0];
+            cy = output[bestIdx * stride + 1];
+            w = output[bestIdx * stride + 2];
+            h = output[bestIdx * stride + 3];
+        } else {
+            cx = output[0 * N + bestIdx];
+            cy = output[1 * N + bestIdx];
+            w = output[2 * N + bestIdx];
+            h = output[3 * N + bestIdx];
+        }
+
         return {
             detected: true,
             name: CLASSES[bestClass],
-            confidence: bestScore
+            confidence: bestScore,
+            box: { cx, cy, w, h }  // Bounding box in 640x640 space
         };
 
     } catch (error) {

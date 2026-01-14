@@ -424,22 +424,28 @@ function isKartariMukhamMudra(landmarks, scaleRef) {
 }
 
 function isSarpashirshaMudra(landmarks, scaleRef) {
-    const loose = 0.80;
-    const idx = isFingerStraight(landmarks, 5, 6, 8, loose);
-    const mid = isFingerStraight(landmarks, 9, 10, 12, loose);
-    const rng = isFingerStraight(landmarks, 13, 14, 16, loose);
-    const pnk = isFingerStraight(landmarks, 17, 18, 20, loose);
+    const loose = 0.75;  // relaxed straightness
 
-    if (!(idx && mid && rng && pnk)) return false;
+    if (!(
+        isFingerStraight(landmarks, 5, 6, 8, loose) &&
+        isFingerStraight(landmarks, 9, 10, 12, loose) &&
+        isFingerStraight(landmarks, 13, 14, 16, loose) &&
+        isFingerStraight(landmarks, 17, 18, 20, loose)
+    )) return false;
 
     const tipDist = normDistLazy(landmarks, 8, 20, scaleRef);
     const mcpDist = normDistLazy(landmarks, 5, 17, scaleRef);
-    if (!(tipDist < mcpDist)) return false;
 
+    // Relaxed convergence
+    if (tipDist > mcpDist * 0.90) return false;
+
+    // Thumb loosely tucked
     const thumbIndexNd = normDistLazy(landmarks, 4, 5, scaleRef);
     const mcpRefNd = normDistLazy(landmarks, 5, 9, scaleRef);
 
-    return thumbIndexNd < (mcpRefNd * 1.5);
+    if (thumbIndexNd > mcpRefNd * 2.0) return false;
+
+    return true;
 }
 
 function isChaturaMudra(landmarks, scaleRef) {
@@ -646,8 +652,8 @@ const RULE_MUDRA_FUNCTIONS = {
     "Ardhapataka Mudra": isArdhapataka,
     "Shuka Tundam Mudra": isShukaTundam,
     "Arala Mudra": isAralaMudra,
-    "Pataka Mudra": isPatakaMudra,
     "Sarpashirsha Mudra": isSarpashirshaMudra,
+    "Pataka Mudra": isPatakaMudra,
     "Chatura Mudra": isChaturaMudra
 };
 

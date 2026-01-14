@@ -256,19 +256,25 @@
 
         .current-mudra-display {
             text-align: center;
-            padding: var(--spacing-md) 0;
+            padding: var(--spacing-lg) var(--spacing-md);
+            background: linear-gradient(135deg, rgba(139, 41, 66, 0.08) 0%, rgba(212, 168, 75, 0.08) 100%);
+            border-radius: var(--radius-md);
+            margin-top: var(--spacing-sm);
         }
 
         .current-mudra-display h4 {
             font-family: var(--font-heading);
-            font-size: 1.25rem;
-            color: var(--color-dark);
-            margin-bottom: var(--spacing-xs);
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--color-primary);
+            margin-bottom: var(--spacing-sm);
+            text-shadow: 1px 1px 2px rgba(139, 41, 66, 0.1);
+            line-height: 1.1;
         }
 
         .current-mudra-display p {
             color: var(--color-gray);
-            font-size: 0.9rem;
+            font-size: 1rem;
         }
 
         .stats-grid {
@@ -563,6 +569,7 @@
             // Pre-allocated buffers
             const tensorBuffer = new Float32Array(3 * 640 * 640);
             let prepCanvas = null, prepCtx = null;
+            let overlayCanvas = null, overlayCtx = null;
 
             const $ = id => document.getElementById(id);
 
@@ -654,7 +661,62 @@
 
                 if (!result.detected) return null;
 
-                return { name: result.name, conf: result.confidence };
+                return { name: result.name, conf: result.confidence, box: result.box };
+            }
+
+            // =================================================================
+            // BOUNDING BOX DRAWING
+            // =================================================================
+            function drawBoundingBox(box, name, conf) {
+                if (!overlayCanvas) {
+                    overlayCanvas = $('overlayCanvas');
+                    overlayCtx = overlayCanvas.getContext('2d');
+                }
+
+                // Match canvas size to video
+                const videoWidth = video.videoWidth || 640;
+                const videoHeight = video.videoHeight || 480;
+                if (overlayCanvas.width !== videoWidth) overlayCanvas.width = videoWidth;
+                if (overlayCanvas.height !== videoHeight) overlayCanvas.height = videoHeight;
+
+                // Clear previous drawing
+                overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+                if (!box) return;
+
+                // Convert from 640x640 letterbox space to video space
+                const scale = Math.min(640 / videoWidth, 640 / videoHeight);
+                const padX = (640 - videoWidth * scale) / 2;
+                const padY = (640 - videoHeight * scale) / 2;
+
+                // Convert box center/size from 640 space to video space
+                const cx = (box.cx - padX) / scale;
+                const cy = (box.cy - padY) / scale;
+                const w = box.w / scale;
+                const h = box.h / scale;
+
+                // Convert to top-left corner
+                const x = cx - w / 2;
+                const y = cy - h / 2;
+
+                // Draw bounding box
+                overlayCtx.strokeStyle = '#D4A84B';
+                overlayCtx.lineWidth = 3;
+                overlayCtx.strokeRect(x, y, w, h);
+
+                // Draw label background
+                const label = `${name} ${Math.round(conf * 100)}%`;
+                overlayCtx.font = 'bold 16px Inter, sans-serif';
+                const textWidth = overlayCtx.measureText(label).width;
+                const labelHeight = 24;
+                const labelY = Math.max(y - labelHeight - 4, 0);
+
+                overlayCtx.fillStyle = 'rgba(139, 41, 66, 0.9)';
+                overlayCtx.fillRect(x, labelY, textWidth + 12, labelHeight);
+
+                // Draw label text
+                overlayCtx.fillStyle = '#fff';
+                overlayCtx.fillText(label, x + 6, labelY + 17);
             }
 
             // =================================================================
@@ -718,6 +780,7 @@
                     try {
                         const result = await detect();
                         updateUI(result?.name || null, result?.conf || 0);
+                        drawBoundingBox(result?.box || null, result?.name || '', result?.conf || 0);
                     } catch (e) {
                         console.error('Detection error:', e);
                     }
