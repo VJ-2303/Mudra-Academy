@@ -15,8 +15,7 @@
     <link rel="stylesheet" href="../css/styles.css">
     <link rel="stylesheet" href="../css/pages.css">
 
-    <!-- ONNX Runtime Web for ML inference -->
-    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.17.0/dist/ort.min.js"></script>
+    <!-- ONNX inference now runs in main process via onnxruntime-node -->
 
     <link rel="icon" type="image/svg+xml"
         href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%238B2942' width='100' height='100' rx='20'/%3E%3Ctext x='50' y='65' font-size='50' text-anchor='middle' fill='%23D4A84B' font-family='serif'%3EM%3C/text%3E%3C/svg%3E">
@@ -522,11 +521,8 @@
 
     <script>
         /**
-         * DOUBLE HAND DETECTION - OPTIMIZED REWRITE
-         * - Uses KKVP_NEW.ONNX (Correct Model)
-         * - Letterboxing (Padding) instead of Stretching (Exact Accuracy)
-         * - NMS (Non-Max Suppression) to filter ghost boxes
-         * - THROTTLED LOOP (150ms delay) to prevent freezing/high RAM
+         * DOUBLE HAND DETECTION - NATIVE ONNX (via onnxruntime-node in main process)
+         * Uses IPC to communicate with main process for ~11-17x faster inference
          */
         (function () {
             'use strict';
@@ -534,15 +530,7 @@
             // =================================================================
             // CONFIGURATION
             // =================================================================
-            const MODEL_PATH = '../ml/models/kkvp_new.onnx'; // CORRECT PATH
-            const CLASSES = [
-                'Anjali', 'MATSYA', 'Naagabandha', 'SVASTIKA',
-                'berunda', 'chakra', 'garuda', 'karkota',
-                'katariswastika', 'katva', 'pasha',
-                'pushpantha', 'shanka', 'shivalinga'
-            ];
-            const CONF_THRESHOLD = 0.35;
-            const DETECTION_INTERVAL = 150; // ms (Limit to ~6 FPS to save RAM/CPU)
+            const DETECTION_INTERVAL = 50; // ms (~20 FPS - fast with native inference)
 
             const MEANINGS = {
                 'Anjali': 'Salutation - Prayer, greeting',
@@ -563,7 +551,7 @@
             // =================================================================
             // STATE
             // =================================================================
-            let session = null;
+            let modelReady = false;
             let video = null;
             let running = false;
             let sessionTimer = null;
@@ -579,7 +567,7 @@
             const $ = id => document.getElementById(id);
 
             // =================================================================
-            // MODEL INIT
+            // MODEL INIT (via IPC to main process)
             // =================================================================
             async function initModel() {
                 const overlay = $('loadingOverlay');
@@ -587,21 +575,23 @@
                 const status = $('statusIndicator');
 
                 overlay.style.display = 'flex';
-                text.textContent = 'Loading AI...';
+                text.textContent = 'Loading AI (Native)...';
 
                 try {
-                    // Reduce thread count to prevent locking main thread
-                    ort.env.wasm.numThreads = 2;
-                    ort.env.wasm.simd = true;
+                    if (!window.electronAPI?.mudraInit) {
+                        throw new Error('Not running in Electron');
+                    }
 
-                    session = await ort.InferenceSession.create(MODEL_PATH, {
-                        executionProviders: ['wasm'],
-                        graphOptimizationLevel: 'all'
-                    });
+                    const result = await window.electronAPI.mudraInit();
 
-                    status.className = 'api-status connected';
-                    status.innerHTML = '<span>●</span> Ready';
-                    $('startBtn').disabled = false;
+                    if (result.success) {
+                        modelReady = true;
+                        status.className = 'api-status connected';
+                        status.innerHTML = '<span>●</span> Ready (Native)';
+                        $('startBtn').disabled = false;
+                    } else {
+                        throw new Error('Model init failed');
+                    }
 
                 } catch (e) {
                     console.error('Model error:', e);
@@ -613,7 +603,7 @@
             }
 
             // =================================================================
-            // PREPROCESS - LETTERBOXING (Accurate)
+            // PREPROCESS - Returns Float32Array for IPC
             // =================================================================
             function preprocess() {
                 if (!prepCanvas) {
@@ -623,22 +613,20 @@
                     prepCtx = prepCanvas.getContext('2d', { willReadFrequently: true });
                 }
 
-                // 1. Fill with neutral gray
+                // Letterboxing
                 prepCtx.fillStyle = '#727272';
                 prepCtx.fillRect(0, 0, 640, 640);
 
-                // 2. Calculate scale to fit
                 const scale = Math.min(640 / video.videoWidth, 640 / video.videoHeight);
                 const w = video.videoWidth * scale;
                 const h = video.videoHeight * scale;
-
-                // 3. Center image
                 const x = (640 - w) / 2;
                 const y = (640 - h) / 2;
 
                 prepCtx.drawImage(video, x, y, w, h);
                 const { data } = prepCtx.getImageData(0, 0, 640, 640);
 
+                // Convert to CHW format and normalize
                 const pixels = 640 * 640;
                 for (let i = 0; i < pixels; i++) {
                     const idx = i << 2;
@@ -647,135 +635,26 @@
                     tensorBuffer[pixels * 2 + i] = data[idx + 2] / 255;
                 }
 
-                return new ort.Tensor('float32', tensorBuffer, [1, 3, 640, 640]);
+                return tensorBuffer;
             }
 
             // =================================================================
-            // NMS UTILS
-            // =================================================================
-            function iou(box1, box2) {
-                const x1 = Math.max(box1[0], box2[0]);
-                const y1 = Math.max(box1[1], box2[1]);
-                const x2 = Math.min(box1[2], box2[2]);
-                const y2 = Math.min(box1[3], box2[3]);
-
-                if (x2 < x1 || y2 < y1) return 0;
-
-                const intersection = (x2 - x1) * (y2 - y1);
-                const area1 = (box1[2] - box1[0]) * (box1[3] - box1[1]);
-                const area2 = (box2[2] - box2[0]) * (box2[3] - box2[1]);
-
-                return intersection / (area1 + area2 - intersection + 1e-6);
-            }
-
-            // =================================================================
-            // DETECT - ROBUST NMS
+            // DETECT - via IPC to main process (native onnxruntime-node)
             // =================================================================
             async function detect() {
-                if (!session || !video || video.readyState < 2) return null;
+                if (!modelReady || !video || video.readyState < 2) return null;
 
-                const tensor = preprocess();
-                const feeds = {};
-                feeds[session.inputNames[0]] = tensor;
+                const imageData = preprocess();
+                const result = await window.electronAPI.mudraDetect(imageData);
 
-                // Run inference
-                const results = await session.run(feeds);
-                const outputTensor = results[session.outputNames[0]];
-                const output = outputTensor.data;
-
-                const dims = outputTensor.dims;
-                let N, numClasses, transposed;
-
-                // Robust Shape Detection
-                if (dims[1] > dims[2]) {
-                    N = dims[1];          // Anchors
-                    numClasses = dims[2] - 4; // Classes
-                    transposed = true;
-                } else {
-                    numClasses = dims[1] - 4;
-                    N = dims[2];
-                    transposed = false;
+                if (result.error) {
+                    console.error('Detection error:', result.error);
+                    return null;
                 }
 
-                const stride = numClasses + 4;
-                let boxes = [];
+                if (!result.detected) return null;
 
-                // 1. Decode Boxes
-                for (let i = 0; i < N; i++) {
-                    let maxScore = 0;
-                    let maxClass = 0;
-
-                    // Optimization: Check objectness/max class only briefly
-                    // For typical YOLOv8, no separate objectness, so we scan classes
-                    for (let c = 0; c < numClasses; c++) {
-                        let score;
-                        if (transposed) {
-                            score = output[i * stride + (4 + c)];
-                        } else {
-                            score = output[(4 + c) * N + i];
-                        }
-
-                        if (score > maxScore) {
-                            maxScore = score;
-                            maxClass = c;
-                        }
-                    }
-
-                    if (maxScore > CONF_THRESHOLD) {
-                        boxes.push({
-                            // Store only what we need to avoid heavy computation here
-                            index: i,
-                            score: maxScore,
-                            classIdx: maxClass
-                        });
-                    }
-                }
-
-                if (boxes.length === 0) return null;
-
-                // 2. Decode coordinates ONLY for potential boxes (Optimization)
-                // This saves converting 8400 boxes when only 2 are valid
-                boxes = boxes.map(b => {
-                    let cx, cy, w, h;
-                    const i = b.index;
-
-                    if (transposed) {
-                        const offset = i * stride;
-                        cx = output[offset + 0];
-                        cy = output[offset + 1];
-                        w = output[offset + 2];
-                        h = output[offset + 3];
-                    } else {
-                        cx = output[0 * N + i];
-                        cy = output[1 * N + i];
-                        w = output[2 * N + i];
-                        h = output[3 * N + i];
-                    }
-
-                    return {
-                        box: [cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2],
-                        score: b.score,
-                        classIdx: b.classIdx
-                    };
-                });
-
-                // 3. NMS
-                boxes.sort((a, b) => b.score - a.score);
-                const finalBoxes = [];
-
-                while (boxes.length > 0) {
-                    const best = boxes.shift();
-                    finalBoxes.push(best);
-                    // Filter overlaps > 0.45 IOU
-                    boxes = boxes.filter(b => iou(best.box, b.box) < 0.45);
-                }
-
-                if (finalBoxes.length > 0) {
-                    const best = finalBoxes[0];
-                    return { name: CLASSES[best.classIdx], conf: best.score };
-                }
-
-                return null;
+                return { name: result.name, conf: result.confidence };
             }
 
             // =================================================================
@@ -828,13 +707,12 @@
             }
 
             // =================================================================
-            // LOOP - THROTTLED
+            // LOOP
             // =================================================================
             async function loop() {
                 if (!running) return;
 
                 const now = Date.now();
-                // Limit FPS (Default 150ms = ~6.6 FPS)
                 if (now - lastDetectTime >= DETECTION_INTERVAL) {
                     lastDetectTime = now;
                     try {
@@ -852,7 +730,7 @@
             // CONTROLS
             // =================================================================
             function start() {
-                if (!session) { alert('Model loading...'); return; }
+                if (!modelReady) { alert('Model loading...'); return; }
                 video = $('webcam');
 
                 navigator.mediaDevices.getUserMedia({
