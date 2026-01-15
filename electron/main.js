@@ -20,7 +20,7 @@ const CLASSES = [
     'katariswastika', 'katva', 'pasha', 'pushpantha',
     'sakata', 'shanka', 'shivalinga', 'utsanga'
 ];
-const CONF_THRESHOLD = 0.35;
+const CONF_THRESHOLD = 0.50;
 
 // ================================================================================
 // ONNX MODEL LOADING

@@ -48,16 +48,6 @@
             display: none;
         }
 
-        #overlayCanvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            transform: scaleX(-1);
-        }
-
         .video-placeholder {
             position: absolute;
             inset: 0;
@@ -402,7 +392,6 @@
                     <div class="video-container">
                         <video id="webcam" autoplay playsinline></video>
                         <canvas id="canvas"></canvas>
-                        <canvas id="overlayCanvas"></canvas>
                         <div class="mode-badge">Double Hand Mode</div>
                         <div class="video-placeholder" id="placeholder">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -442,18 +431,6 @@
                     </div>
                 </div>
                 <aside>
-                    <div class="sidebar-card">
-                        <h3>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                                <polyline points="22 4 12 14.01 9 11.01" />
-                            </svg>
-                            System Status
-                        </h3>
-                        <div class="api-status loading" id="statusIndicator">
-                            <span>●</span> Loading...
-                        </div>
-                    </div>
                     <div class="sidebar-card">
                         <h3>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -536,7 +513,7 @@
             // =================================================================
             // CONFIGURATION
             // =================================================================
-            const DETECTION_INTERVAL = 50; // ms (~20 FPS - fast with native inference)
+            const DETECTION_INTERVAL = 80; // ms (~12 FPS - balanced speed)
 
             const MEANINGS = {
                 'Anjali': 'Salutation - Prayer, greeting',
@@ -548,10 +525,13 @@
                 'garuda': 'Divine eagle',
                 'karkota': 'Crab',
                 'katariswastika': 'Crossed scissors',
+                'katva': 'Elephant',
                 'pasha': 'Noose',
                 'pushpantha': 'Flower offering',
+                'sakata': 'Cart/Wagon',
                 'shanka': 'Conch shell',
-                'shivalinga': 'Shiva symbol'
+                'shivalinga': 'Shiva symbol',
+                'utsanga': 'Embrace/Lap'
             };
 
             // =================================================================
@@ -569,7 +549,15 @@
             // Pre-allocated buffers
             const tensorBuffer = new Float32Array(3 * 640 * 640);
             let prepCanvas = null, prepCtx = null;
-            let overlayCanvas = null, overlayCtx = null;
+
+            // FSM State for temporal smoothing
+            let fsmState = 'IDLE';  // IDLE, ENTERING, CONFIRMED, EXITING
+            let fsmMudra = null;
+            let fsmConf = 0;
+            let enterCount = 0;
+            let exitCount = 0;
+            const ENTER_THRESHOLD = 1;  // Frames to confirm (instant)
+            const EXIT_THRESHOLD = 2;   // Frames to exit
 
             const $ = id => document.getElementById(id);
 
@@ -579,7 +567,6 @@
             async function initModel() {
                 const overlay = $('loadingOverlay');
                 const text = $('loadingText');
-                const status = $('statusIndicator');
 
                 overlay.style.display = 'flex';
                 text.textContent = 'Loading AI (Native)...';
@@ -593,8 +580,6 @@
 
                     if (result.success) {
                         modelReady = true;
-                        status.className = 'api-status connected';
-                        status.innerHTML = '<span>●</span> Ready (Native)';
                         $('startBtn').disabled = false;
                     } else {
                         throw new Error('Model init failed');
@@ -602,8 +587,8 @@
 
                 } catch (e) {
                     console.error('Model error:', e);
-                    status.className = 'api-status error';
-                    status.innerHTML = '<span>●</span> Error';
+                    text.textContent = 'Error loading model';
+                    text.style.color = '#ff4444';
                 } finally {
                     overlay.style.display = 'none';
                 }
@@ -661,62 +646,80 @@
 
                 if (!result.detected) return null;
 
-                return { name: result.name, conf: result.confidence, box: result.box };
+                return { name: result.name, conf: result.confidence };
             }
 
             // =================================================================
-            // BOUNDING BOX DRAWING
+            // FSM UPDATE - Temporal smoothing to eliminate flickering
             // =================================================================
-            function drawBoundingBox(box, name, conf) {
-                if (!overlayCanvas) {
-                    overlayCanvas = $('overlayCanvas');
-                    overlayCtx = overlayCanvas.getContext('2d');
+            function updateFSM(candidateName, candidateConf) {
+                // No detection
+                if (!candidateName) {
+                    if (fsmState === 'CONFIRMED' || fsmState === 'EXITING') {
+                        exitCount++;
+                        if (exitCount >= EXIT_THRESHOLD) {
+                            fsmState = 'IDLE';
+                            fsmMudra = null;
+                            fsmConf = 0;
+                            return { name: null, conf: 0 };
+                        }
+                        fsmState = 'EXITING';
+                        return { name: fsmMudra, conf: fsmConf };
+                    }
+                    fsmState = 'IDLE';
+                    return { name: null, conf: 0 };
                 }
 
-                // Match canvas size to video
-                const videoWidth = video.videoWidth || 640;
-                const videoHeight = video.videoHeight || 480;
-                if (overlayCanvas.width !== videoWidth) overlayCanvas.width = videoWidth;
-                if (overlayCanvas.height !== videoHeight) overlayCanvas.height = videoHeight;
+                // Detection present
+                if (fsmState === 'IDLE') {
+                    fsmState = 'ENTERING';
+                    fsmMudra = candidateName;
+                    fsmConf = candidateConf;
+                    enterCount = 1;
+                    return { name: null, conf: 0 }; // Don't show yet
+                }
 
-                // Clear previous drawing
-                overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+                if (fsmState === 'ENTERING') {
+                    if (candidateName === fsmMudra) {
+                        enterCount++;
+                        fsmConf = candidateConf;
+                        if (enterCount >= ENTER_THRESHOLD) {
+                            fsmState = 'CONFIRMED';
+                            exitCount = 0;
+                            return { name: fsmMudra, conf: fsmConf };
+                        }
+                        return { name: null, conf: 0 }; // Still confirming
+                    } else {
+                        // Different mudra - reset
+                        fsmMudra = candidateName;
+                        fsmConf = candidateConf;
+                        enterCount = 1;
+                        return { name: null, conf: 0 };
+                    }
+                }
 
-                if (!box) return;
+                if (fsmState === 'CONFIRMED' || fsmState === 'EXITING') {
+                    if (candidateName === fsmMudra) {
+                        fsmState = 'CONFIRMED';
+                        exitCount = 0;
+                        fsmConf = candidateConf;
+                        return { name: fsmMudra, conf: fsmConf };
+                    } else {
+                        exitCount++;
+                        if (exitCount >= EXIT_THRESHOLD) {
+                            // Switch to new mudra
+                            fsmState = 'ENTERING';
+                            fsmMudra = candidateName;
+                            fsmConf = candidateConf;
+                            enterCount = 1;
+                            return { name: null, conf: 0 };
+                        }
+                        fsmState = 'EXITING';
+                        return { name: fsmMudra, conf: fsmConf }; // Keep showing old
+                    }
+                }
 
-                // Convert from 640x640 letterbox space to video space
-                const scale = Math.min(640 / videoWidth, 640 / videoHeight);
-                const padX = (640 - videoWidth * scale) / 2;
-                const padY = (640 - videoHeight * scale) / 2;
-
-                // Convert box center/size from 640 space to video space
-                const cx = (box.cx - padX) / scale;
-                const cy = (box.cy - padY) / scale;
-                const w = box.w / scale;
-                const h = box.h / scale;
-
-                // Convert to top-left corner
-                const x = cx - w / 2;
-                const y = cy - h / 2;
-
-                // Draw bounding box
-                overlayCtx.strokeStyle = '#D4A84B';
-                overlayCtx.lineWidth = 3;
-                overlayCtx.strokeRect(x, y, w, h);
-
-                // Draw label background
-                const label = `${name} ${Math.round(conf * 100)}%`;
-                overlayCtx.font = 'bold 16px Inter, sans-serif';
-                const textWidth = overlayCtx.measureText(label).width;
-                const labelHeight = 24;
-                const labelY = Math.max(y - labelHeight - 4, 0);
-
-                overlayCtx.fillStyle = 'rgba(139, 41, 66, 0.9)';
-                overlayCtx.fillRect(x, labelY, textWidth + 12, labelHeight);
-
-                // Draw label text
-                overlayCtx.fillStyle = '#fff';
-                overlayCtx.fillText(label, x + 6, labelY + 17);
+                return { name: null, conf: 0 };
             }
 
             // =================================================================
@@ -779,8 +782,9 @@
                     lastDetectTime = now;
                     try {
                         const result = await detect();
-                        updateUI(result?.name || null, result?.conf || 0);
-                        drawBoundingBox(result?.box || null, result?.name || '', result?.conf || 0);
+                        // Pass raw detection through FSM for temporal smoothing
+                        const fsmResult = updateFSM(result?.name || null, result?.conf || 0);
+                        updateUI(fsmResult.name, fsmResult.conf);
                     } catch (e) {
                         console.error('Detection error:', e);
                     }
