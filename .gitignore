@@ -20,5 +20,6 @@ out/
 .cache/
 .webpack/
 
+ml/venv/
 *.pt
-double.onnx
+*.onnx

@@ -30,7 +30,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
      * @param {Float32Array} imageData - Preprocessed image tensor [1, 3, 640, 640]
      * @returns {Promise<{detected: boolean, name?: string, confidence?: number, error?: string}>}
      */
-    mudraDetect: (imageData) => ipcRenderer.invoke('mudra:detect', Array.from(imageData)),
+    mudraDetect: (imageData) => ipcRenderer.invoke('mudra:detect', imageData),
 
     /**
      * Get list of class names

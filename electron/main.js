@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
-const ort = require('onnxruntime-node');
+const { spawn } = require('child_process');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -8,145 +8,126 @@ if (require('electron-squirrel-startup')) {
 }
 
 let mainWindow;
-let onnxSession = null;
+let pythonProcess = null;
+let isPythonReady = false;
+let detectQueue = [];
 
-// ================================================================================
-// ONNX MODEL CONFIGURATION
-// ================================================================================
-const MODEL_PATH = path.join(__dirname, '../ml/models/kkkvp6.onnx');
-const CLASSES = [
-    'Anjali', 'MATSYA', 'Naagabandha', 'SVASTIKA',
-    'berunda', 'chakra', 'garuda', 'karkota',
-    'katariswastika', 'katva', 'pasha', 'pushpantha',
-    'sakata', 'shanka', 'shivalinga', 'utsanga'
-];
-const CONF_THRESHOLD = 0.50;
+const VENV_PYTHON = path.join(__dirname, '../ml/venv/bin/python');
+const SCRIPT_PATH = path.join(__dirname, '../ml/mudra_inference.py');
 
-// ================================================================================
-// ONNX MODEL LOADING
-// ================================================================================
-async function loadModel() {
-    try {
-        console.log('[ONNX] Loading model from:', MODEL_PATH);
-        onnxSession = await ort.InferenceSession.create(MODEL_PATH);
-        console.log('[ONNX] Model loaded successfully');
-        console.log('[ONNX] Input names:', onnxSession.inputNames);
-        console.log('[ONNX] Output names:', onnxSession.outputNames);
-        return true;
-    } catch (error) {
-        console.error('[ONNX] Failed to load model:', error);
-        return false;
+function spawnPythonProcess() {
+    return new Promise((resolve, reject) => {
+        if (pythonProcess) {
+            if (isPythonReady) return resolve(true);
+            return setTimeout(() => resolve(spawnPythonProcess()), 100);
+        }
+
+        console.log('[PY] Spawning Python process...', VENV_PYTHON);
+
+        try {
+            pythonProcess = spawn(VENV_PYTHON, ['-u', SCRIPT_PATH]);
+
+            // Handle Stdout (Data + Ready signal)
+            let buffer = '';
+            pythonProcess.stdout.on('data', (data) => {
+                buffer += data.toString();
+                const lines = buffer.split('\n');
+                buffer = lines.pop(); // Keep incomplete line
+
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed) continue;
+
+                    if (trimmed === 'READY') {
+                        console.log('[PY] Python Engine Ready');
+                        isPythonReady = true;
+                        resolve(true);
+                    } else if (trimmed.startsWith('{')) {
+                        // JSON response
+                        try {
+                            const result = JSON.parse(trimmed);
+                            // Resolve the oldest request
+                            const req = detectQueue.shift();
+                            if (req) req.resolve(result);
+                        } catch (e) {
+                            console.error('[PY] JSON Parse Error:', e);
+                        }
+                    } else {
+                        console.log('[PY] stdout:', trimmed);
+                    }
+                }
+            });
+
+            // Handle Stderr (Logs)
+            pythonProcess.stderr.on('data', (data) => {
+                const msg = data.toString().trim();
+                // Filter out common pytorch log spam if needed
+                console.log(`[PY-LOG] ${msg}`);
+            });
+
+            pythonProcess.on('error', (err) => {
+                console.error('[PY] Failed to start:', err);
+                isPythonReady = false;
+                reject(err);
+            });
+
+            pythonProcess.on('close', (code) => {
+                console.log(`[PY] Process exited with code ${code}`);
+                pythonProcess = null;
+                isPythonReady = false;
+            });
+
+        } catch (e) {
+            console.error('[PY] Spawn error:', e);
+            reject(e);
+        }
+    });
+}
+
+function killPythonProcess() {
+    if (pythonProcess) {
+        pythonProcess.kill();
+        pythonProcess = null;
     }
 }
 
-// ================================================================================
-// INFERENCE FUNCTION
-// ================================================================================
-async function runInference(imageData) {
-    if (!onnxSession) {
-        return { error: 'Model not loaded' };
-    }
-
-    try {
-        // imageData is a Float32Array of shape [1, 3, 640, 640]
-        const inputTensor = new ort.Tensor('float32', imageData, [1, 3, 640, 640]);
-        const feeds = {};
-        feeds[onnxSession.inputNames[0]] = inputTensor;
-
-        // Run inference
-        const results = await onnxSession.run(feeds);
-        const outputTensor = results[onnxSession.outputNames[0]];
-        const output = outputTensor.data;
-        const dims = outputTensor.dims;
-
-        // Determine shape (standard vs transposed)
-        let N, numClasses, transposed;
-        if (dims[1] > dims[2]) {
-            N = dims[1];
-            numClasses = dims[2] - 4;
-            transposed = true;
-        } else {
-            numClasses = dims[1] - 4;
-            N = dims[2];
-            transposed = false;
-        }
-
-        const stride = numClasses + 4;
-        let bestScore = 0;
-        let bestClass = 0;
-        let bestIdx = 0;
-
-        // Find best detection
-        for (let i = 0; i < N; i++) {
-            for (let c = 0; c < numClasses; c++) {
-                let score;
-                if (transposed) {
-                    score = output[i * stride + (4 + c)];
-                } else {
-                    score = output[(4 + c) * N + i];
-                }
-
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestClass = c;
-                    bestIdx = i;
-                }
-            }
-        }
-
-        if (bestScore < CONF_THRESHOLD) {
-            return { detected: false };
-        }
-
-        // Extract bounding box (cx, cy, w, h) for the best detection
-        let cx, cy, w, h;
-        if (transposed) {
-            cx = output[bestIdx * stride + 0];
-            cy = output[bestIdx * stride + 1];
-            w = output[bestIdx * stride + 2];
-            h = output[bestIdx * stride + 3];
-        } else {
-            cx = output[0 * N + bestIdx];
-            cy = output[1 * N + bestIdx];
-            w = output[2 * N + bestIdx];
-            h = output[3 * N + bestIdx];
-        }
-
-        return {
-            detected: true,
-            name: CLASSES[bestClass],
-            confidence: bestScore,
-            box: { cx, cy, w, h }  // Bounding box in 640x640 space
-        };
-
-    } catch (error) {
-        console.error('[ONNX] Inference error:', error);
-        return { error: error.message };
-    }
-}
-
-// ================================================================================
-// IPC HANDLERS
-// ================================================================================
 ipcMain.handle('mudra:init', async () => {
-    if (onnxSession) {
+    try {
+        await spawnPythonProcess();
         return { success: true };
+    } catch (e) {
+        console.error('Init failed:', e);
+        return { success: false, error: e.message };
     }
-    const success = await loadModel();
-    return { success };
 });
 
-ipcMain.handle('mudra:detect', async (event, imageData) => {
-    return await runInference(imageData);
+// imageData is now a Base64 string from the frontend
+ipcMain.handle('mudra:detect', async (event, base64Image) => {
+    if (!isPythonReady || !pythonProcess) {
+        return { error: 'Python model not ready' };
+    }
+
+    return new Promise((resolve) => {
+        // Queue the resolution
+        detectQueue.push({ resolve });
+
+        // Write to stdin
+        // Ensure newline for readline() in python
+        try {
+            pythonProcess.stdin.write(base64Image + '\n');
+        } catch (e) {
+            // Handle write error (pipe closed etc)
+            const req = detectQueue.pop(); // remove self
+            if (req) req.resolve({ error: 'Pipe write error' });
+        }
+    });
 });
 
 ipcMain.handle('mudra:getClasses', () => {
-    return CLASSES;
+    // Return placeholder - classes are now managed by Python model
+    return [];
 });
 
-// ================================================================================
-// WINDOW CREATION
-// ================================================================================
 const createWindow = () => {
     mainWindow = new BrowserWindow({
         width: 1400,
@@ -155,7 +136,7 @@ const createWindow = () => {
             nodeIntegration: false,
             contextIsolation: true,
             preload: path.join(__dirname, 'preload.js'),
-            webSecurity: false,
+            // webSecurity: false, // Not needed unless loading local resource issues occur
         },
         icon: path.join(__dirname, '../assets/images/logo.png'),
         autoHideMenuBar: true,
@@ -168,12 +149,8 @@ const createWindow = () => {
     }
 };
 
-// ================================================================================
-// APP LIFECYCLE
-// ================================================================================
 app.whenReady().then(async () => {
-    // Pre-load model on app start for faster first detection
-    await loadModel();
+    spawnPythonProcess().catch(e => console.log('Early spawn failed, will retry on init:', e));
 
     createWindow();
 
@@ -185,7 +162,12 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
+    killPythonProcess();
     if (process.platform !== 'darwin') {
         app.quit();
     }
+});
+
+app.on('will-quit', () => {
+    killPythonProcess();
 });

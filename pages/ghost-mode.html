@@ -216,6 +216,12 @@
 <body>
     <nav class="navbar scrolled">
         <div class="container">
+            <a href="#" onclick="history.back(); return false;" class="back-link"
+                style="margin-right: 15px; display: flex; align-items: center; color: white;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7" />
+                </svg>
+            </a>
             <a href="../index.html" class="logo">
                 <div class="logo-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -259,6 +265,14 @@
                             style="width: 48px; height: 48px; border: 4px solid #444; border-top-color: #D4A84B; border-radius: 50%; animation: spin 1s linear infinite;">
                         </div>
                         <div id="loading-text" style="margin-top: 16px; color: #D4A84B; font-size: 1rem;">Loading AI...
+                        </div>
+                    </div>
+
+                    <!-- Hold Progress Bar -->
+                    <div id="hold-progress-container"
+                        style="position: absolute; bottom: 0; left: 0; width: 100%; height: 6px; background: rgba(0,0,0,0.5); z-index: 50; display: none;">
+                        <div id="hold-progress-bar"
+                            style="width: 0%; height: 100%; background: #28c840; transition: width 0.1s linear; box-shadow: 0 0 10px #28c840;">
                         </div>
                     </div>
                     <style>
@@ -365,15 +379,17 @@
             let isTransitioning = false;
             let ghostEnabled = true;
 
-            const MATCH_THRESHOLD = 2;
-
+            const MATCH_DURATION = 500; // 1.5 seconds to hold
+            let matchStartTime = 0;
+            let currentHoldTime = 0;
+            let lastFrameTime = 0;
             // Mudras matching asset filenames (26 single-hand mudras)
             const mudras = [
                 'Pataka', 'Tripataka', 'Ardhapataka', 'Kartarimukha', 'Mayura',
                 'Ardhachandra', 'Arala', 'Sukatunda', 'Musti', 'Sikharam',
                 'Kapittha', 'Katakamukha', 'Suchi', 'Chandrakala', 'Padmakosa',
                 'Sarpashirsa', 'Simhamukha', 'Kangula', 'Alapadma',
-                'Chautra', 'Bharma', 'Hamsasya', 'Hamsapaksa', 'Sandamsha',
+                'Chautra', 'Bharma', 'Hamsasya', 'Hamsapaksa',
                 'Mukula', 'Tamracuda', 'Trisula'
             ];
             let currentIndex = 0;
@@ -411,8 +427,8 @@
                 hands.setOptions({
                     maxNumHands: 1,
                     modelComplexity: 1,  // Full model for better accuracy (0 = lite, 1 = full)
-                    minDetectionConfidence: 0.7,
-                    minTrackingConfidence: 0.6
+                    minDetectionConfidence: 0.6,
+                    minTrackingConfidence: 0.5
                 });
                 hands.onResults(onResults);
 
@@ -434,7 +450,7 @@
                 landmarkCtx.clearRect(0, 0, w, h);
 
                 if (!results.multiHandLandmarks || !results.multiHandLandmarks.length) {
-                    matchCounter = 0;
+                    resetMatch();
                     video.style.boxShadow = 'none';
                     return;
                 }
@@ -455,7 +471,7 @@
                     if (detected && detected !== 'Unknown' && detected !== 'Stabilizing...') {
                         checkMatch(detected);
                     } else {
-                        matchCounter = 0;
+                        resetMatch();
                         video.style.boxShadow = 'none';
                     }
                 } catch (e) {
@@ -473,25 +489,54 @@
             }
 
             // Check match
+            // Check match time-based
             function checkMatch(detected) {
                 if (isTransitioning) return;
 
                 const target = mudras[currentIndex];
+                const now = Date.now();
+
                 if (norm(detected) === norm(target)) {
-                    matchCounter++;
-                    video.style.boxShadow = `0 0 ${15 + matchCounter * 10}px #28c840`;
-                    if (matchCounter >= MATCH_THRESHOLD) triggerSuccess();
+                    if (matchStartTime === 0) {
+                        matchStartTime = now;
+                    }
+
+                    const elapsed = now - matchStartTime;
+                    const progress = Math.min(elapsed / MATCH_DURATION, 1);
+
+                    // Visual feedback: Green glow + Progress Bar
+                    const intensity = 15 + (progress * 40);
+                    video.style.boxShadow = `0 0 ${intensity}px rgba(40, 200, 64, ${0.5 + progress * 0.5})`;
+
+                    const pContainer = document.getElementById('hold-progress-container');
+                    const pBar = document.getElementById('hold-progress-bar');
+                    if (pContainer && pBar) {
+                        pContainer.style.display = 'block';
+                        pBar.style.width = `${progress * 100}%`;
+                    }
+
+                    if (elapsed >= MATCH_DURATION) {
+                        triggerSuccess();
+                    }
                 } else {
-                    matchCounter = 0;
-                    video.style.boxShadow = 'none';
+                    resetMatch();
                 }
+            }
+
+            function resetMatch() {
+                matchStartTime = 0;
+                video.style.boxShadow = 'none';
+                const pContainer = document.getElementById('hold-progress-container');
+                const pBar = document.getElementById('hold-progress-bar');
+                if (pContainer) pContainer.style.display = 'none';
+                if (pBar) pBar.style.width = '0%';
             }
 
             // Success
             function triggerSuccess() {
                 if (isTransitioning) return;
                 isTransitioning = true;
-                matchCounter = 0;
+                resetMatch();
                 video.style.boxShadow = '0 0 50px #28c840';
                 matchFeedback.style.opacity = 1;
 
@@ -522,13 +567,13 @@
             // Navigation
             function nextMudra() {
                 currentIndex = (currentIndex + 1) % mudras.length;
-                matchCounter = 0;
+                matchStartTime = 0;
                 updateDisplay();
             }
 
             function prevMudra() {
                 currentIndex = (currentIndex - 1 + mudras.length) % mudras.length;
-                matchCounter = 0;
+                matchStartTime = 0;
                 updateDisplay();
             }
 

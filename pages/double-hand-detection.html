@@ -15,8 +15,6 @@
     <link rel="stylesheet" href="../css/styles.css">
     <link rel="stylesheet" href="../css/pages.css">
 
-    <!-- ONNX inference now runs in main process via onnxruntime-node -->
-
     <link rel="icon" type="image/svg+xml"
         href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%238B2942' width='100' height='100' rx='20'/%3E%3Ctext x='50' y='65' font-size='50' text-anchor='middle' fill='%23D4A84B' font-family='serif'%3EM%3C/text%3E%3C/svg%3E">
 
@@ -360,6 +358,12 @@
 <body>
     <nav class="navbar scrolled">
         <div class="container">
+            <a href="#" onclick="history.back(); return false;" class="back-link"
+                style="margin-right: 15px; display: flex; align-items: center; color: white;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7" />
+                </svg>
+            </a>
             <a href="../index.html" class="logo">
                 <div class="logo-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -547,7 +551,6 @@
             let lastDetectTime = 0;
 
             // Pre-allocated buffers
-            const tensorBuffer = new Float32Array(3 * 640 * 640);
             let prepCanvas = null, prepCtx = null;
 
             // FSM State for temporal smoothing
@@ -616,18 +619,10 @@
                 const y = (640 - h) / 2;
 
                 prepCtx.drawImage(video, x, y, w, h);
-                const { data } = prepCtx.getImageData(0, 0, 640, 640);
 
-                // Convert to CHW format and normalize
-                const pixels = 640 * 640;
-                for (let i = 0; i < pixels; i++) {
-                    const idx = i << 2;
-                    tensorBuffer[i] = data[idx] / 255;
-                    tensorBuffer[pixels + i] = data[idx + 1] / 255;
-                    tensorBuffer[pixels * 2 + i] = data[idx + 2] / 255;
-                }
-
-                return tensorBuffer;
+                // Return Base64 JPEG string (remove data prefix)
+                // Quality 0.8 is sufficient for YOLO
+                return prepCanvas.toDataURL('image/jpeg', 0.8).split(',')[1];
             }
 
             // =================================================================
