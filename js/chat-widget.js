@@ -11,10 +11,10 @@
 
     // Gemini API endpoint and key (hardcoded)
     const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
-    const GEMINI_API_KEY = 'AIzaSyDZagt_2g8ynnYm-XXY7_lv-EEhekvAo0o';
+    const GEMINI_API_KEY = 'YOUR_GEMINI_API_KEY_HERE'; // <-- Replace with your actual API key
 
     // System prompt for Natya Guru persona
-    const SYSTEM_PROMPT = `You are "Natya Guru", a wise and warm teacher of Bharatanatyam, the classical Indian dance form. Your role is to guide students through the spiritual and technical aspects of this ancient art.
+    const SYSTEM_PROMPT = `You are "StarLight", a wise and warm teacher of Bharatanatyam, the classical Indian dance form. Your role is to guide students through the spiritual and technical aspects of this ancient art.
 
 Your expertise includes:
 - All 28 Asamyukta Hastas (single-hand mudras) and 24 Samyukta Hastas (double-hand mudras)
@@ -53,10 +53,10 @@ If asked about something outside Bharatanatyam, politely redirect the conversati
                     <div class="chat-header-bg"></div>
                     <div class="chat-title">
                         <div class="chat-avatar">
-                            <img src="${avatarSrc}" alt="Guru" onerror="this.onerror=null; this.parentNode.innerHTML='<span>🕉️</span>'">
+                            <img src="${avatarSrc}" alt="Guru" onerror="this.onerror=null; this.parentNode.innerHTML='<span></span>'">
                         </div>
                         <div class="chat-identity">
-                            <h4>Natya Guru</h4>
+                            <h4>StarLight AI</h4>
                             <span class="status-indicator"><span class="status-dot"></span> <span id="chat-status-text">Online</span></span>
                         </div>
                     </div>
@@ -68,7 +68,7 @@ If asked about something outside Bharatanatyam, politely redirect the conversati
                 <div id="chat-messages" class="chat-messages">
                     <div class="message-bubble bot welcome">
                         <div class="message-content">
-                            <p><strong>Namaskaram! 🙏</strong><br>I am Natya Guru. I can guide you through the spiritual and technical world of Bharatanatyam. Ask me about mudras, adavus, or the rich history of this ancient dance form.</p>
+                            <p><strong>Namaskaram! 🙏</strong><br>I am StarLight. I can guide you through the spiritual and technical world of Bharatanatyam. Ask me about mudras, adavus, or the rich history of this ancient dance form.</p>
                         </div>
                         <span class="message-time">Just now</span>
                     </div>
