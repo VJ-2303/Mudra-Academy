@@ -21,6 +21,3 @@ out/
 .webpack/
 
 ml/venv/
-*.pt
-*.onnx
-single.onnx
