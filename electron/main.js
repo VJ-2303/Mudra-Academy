@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, session } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 
@@ -150,6 +150,16 @@ const createWindow = () => {
 };
 
 app.whenReady().then(async () => {
+    // Grant camera and microphone permissions (required for Windows)
+    session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
+        const allowedPermissions = ['media', 'mediaKeySystem', 'geolocation', 'notifications'];
+        if (allowedPermissions.includes(permission)) {
+            callback(true);
+        } else {
+            callback(false);
+        }
+    });
+
     spawnPythonProcess().catch(e => console.log('Early spawn failed, will retry on init:', e));
 
     createWindow();
